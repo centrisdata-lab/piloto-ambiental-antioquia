@@ -1,0 +1,334 @@
+/* ============================================================
+   SISTEMA DE ANIMACIONES — Piloto Ambiental Antioquia
+   Extraído del HTML original para reutilizar sobre el nuevo
+   diseño (SVG/Canva). Ver README-animaciones.md para la guía
+   de qué clase poner en cada tipo de elemento.
+
+   Requiere estas variables (ajusta los valores a tu nueva
+   paleta si cambia en Canva; los nombres deben existir):
+   --gold-300, --gold-400, --forest-900, --forest-950, --line
+   ============================================================ */
+
+/* ---------- 0. Variables mínimas necesarias (fallback) ----------
+   Si tu nuevo :root ya define estas variables con otros valores,
+   BORRA este bloque y usa las tuyas. Se incluye aquí solo para que
+   este archivo funcione de forma aislada si lo pruebas suelto. */
+:root{
+  --gold-300:#f2cd6e;
+  --gold-400:#e8b93f;
+  --forest-900:#0f3826;
+  --forest-950:#0a2418;
+  --line:#d9d2bf;
+  --radius-md:14px;
+  --shadow-md: 0 14px 30px -10px rgba(10,36,24,.3);
+}
+
+/* ============================================================
+   1. ENTRADA DE SLIDE AL HACER SCROLL
+   Aplica a: el contenedor de cada slide/página completa.
+   Requiere JS (animations.js → scroll-reveal).
+   ============================================================ */
+.slide{
+  opacity:0;
+  transform:translateY(36px) scale(.985);
+  transition:opacity .8s cubic-bezier(0.16,1,0.3,1), transform .8s cubic-bezier(0.16,1,0.3,1), box-shadow .3s ease;
+}
+.slide.in-view{
+  opacity:1;
+  transform:translateY(0) scale(1);
+}
+.slide.in-view:hover{ box-shadow:var(--shadow-lg, 0 30px 60px -20px rgba(10,36,24,.4)), 0 0 60px -20px rgba(212,162,78,.25); }
+@media print{
+  .slide{ opacity:1 !important; transform:none !important; transition:none !important; }
+}
+@media (prefers-reduced-motion: reduce){
+  .slide{ opacity:1; transform:none; transition:none; }
+}
+
+/* ============================================================
+   2. FOTOS / IMÁGENES — hover con esquinas tipo "mira de cámara"
+   + zoom en el mismo lugar + clic para ampliar in-place.
+   Aplica a: el contenedor que envuelve la <img> (no a la <img> misma).
+   La <img> interna debe tener la clase .ph.
+   Requiere JS (animations.js → click-to-zoom).
+   ============================================================ */
+.ph{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+  transition:transform .4s cubic-bezier(0.16,1,0.3,1), filter .3s ease;
+}
+.frame{
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--radius-md);
+  border:2px solid transparent;
+  box-shadow:var(--shadow-md);
+  cursor:zoom-in;
+  transition:transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s ease, border-color .25s ease;
+}
+/* esquinas doradas tipo viewfinder, aparecen en hover */
+.frame::after{
+  content:"";
+  position:absolute; inset:9px;
+  border-radius:calc(var(--radius-md) - 6px);
+  background:
+    linear-gradient(var(--gold-300),var(--gold-300)) top left,
+    linear-gradient(var(--gold-300),var(--gold-300)) top left,
+    linear-gradient(var(--gold-300),var(--gold-300)) top right,
+    linear-gradient(var(--gold-300),var(--gold-300)) top right,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom left,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom left,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom right,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom right;
+  background-size:2px 16px, 16px 2px;
+  background-repeat:no-repeat;
+  opacity:0;
+  transform:scale(.92);
+  transition:opacity .3s ease, transform .35s cubic-bezier(0.16,1,0.3,1);
+  pointer-events:none;
+  z-index:2;
+  filter:drop-shadow(0 0 6px rgba(227,189,119,.7));
+}
+/* icono de "ampliar" (⤢), esquina superior derecha */
+.frame::before{
+  content:"⤢";
+  position:absolute;
+  top:12px; right:12px;
+  width:34px; height:34px;
+  border-radius:50%;
+  background:rgba(12,38,28,.6);
+  color:#fff;
+  font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0;
+  transform:translateY(-6px) scale(.8);
+  transition:opacity .25s ease, transform .25s cubic-bezier(0.16,1,0.3,1);
+  pointer-events:none;
+  z-index:3;
+  backdrop-filter:blur(4px);
+  box-shadow:0 0 0 1px rgba(227,189,119,.4);
+}
+.frame:hover{
+  transform:scale(1.1);
+  box-shadow:0 36px 60px -14px rgba(12,38,28,.6), 0 0 0 1px rgba(212,162,78,.25), 0 0 34px -6px rgba(212,162,78,.5);
+  border-color:var(--gold-400);
+  z-index:3;
+}
+.frame:hover .ph{ transform:scale(1.16); filter:saturate(1.12) brightness(1.03); }
+.frame:hover::after{ opacity:1; transform:scale(1); }
+.frame:hover::before{ opacity:1; transform:translateY(0) scale(1); }
+.frame:active{ transform:scale(1.05); }
+.frame:focus-visible{ outline:3px solid var(--gold-400); outline-offset:2px; }
+
+/* clic para ampliar in-place (sin oscurecer el fondo) — clase .zoomed la pone animations.js */
+.frame.zoomed{
+  transform:scale(1.7) !important;
+  z-index:50 !important;
+  box-shadow:0 40px 80px -16px rgba(12,38,28,.6), 0 0 0 3px var(--gold-400) !important;
+  cursor:zoom-out;
+}
+.frame.zoomed .ph{ transform:scale(1) !important; }
+.frame.zoomed::before{ opacity:0 !important; }
+@media print{ .frame.zoomed{ transform:none !important; box-shadow:var(--shadow-md) !important; } }
+
+/* ============================================================
+   3. TARJETAS / BLOQUES DE COLOR — hover con elevación + zoom
+   Aplica a: cualquier tarjeta de contenido (texto, cifras, cita).
+   .hv         → elevación + zoom + sombra (base, poner siempre)
+   .hv-glow    → suma anillo dorado difuso + resplandor que sigue
+                 el mouse (requiere JS → spotlight). Úsala en
+                 tarjetas de color sólido sin imagen de fondo.
+   ============================================================ */
+.hv{
+  position:relative;
+  border:2px solid transparent;
+  transition:transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s ease, background-color .25s ease, border-color .25s ease;
+}
+.hv::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:inherit;
+  background:conic-gradient(from 180deg, var(--gold-300), transparent 30%, transparent 70%, var(--gold-300));
+  opacity:0;
+  z-index:-1;
+  filter:blur(10px);
+  transition:opacity .35s ease;
+  pointer-events:none;
+}
+.hv:hover{
+  transform:scale(1.1) translateY(-4px);
+  box-shadow:0 34px 55px -14px rgba(12,38,28,.45), 0 0 0 1px rgba(212,162,78,.2);
+  z-index:3;
+}
+.hv:hover::before{ opacity:.55; }
+.hv:active{ transform:scale(1.04) translateY(-1px); }
+.hv:focus-visible{ outline:3px solid var(--gold-400); outline-offset:2px; }
+
+/* resplandor tipo "spotlight" que sigue al mouse — tenue, no compite con texto blanco */
+.hv-glow{ --mx:50%; --my:50%; }
+.hv-glow::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:inherit;
+  background-image:radial-gradient(circle 220px at var(--mx) var(--my), rgba(255,255,255,.14), transparent 70%);
+  opacity:0;
+  transition:opacity .4s ease, --mx .15s linear, --my .15s linear;
+  pointer-events:none;
+  z-index:-1;
+}
+.hv-glow:hover::after{ opacity:1; }
+.hv-glow:hover{ border-color:var(--gold-400); }
+@property --mx{ syntax:'<percentage>'; inherits:true; initial-value:50%; }
+@property --my{ syntax:'<percentage>'; inherits:true; initial-value:50%; }
+
+/* opcional: imagen temática muy desvanecida de fondo en una tarjeta
+   (pon un <div class="hv-bg" style="background-image:url(...)"> dentro de .hv) */
+.hv-bg{
+  position:absolute; inset:0;
+  background-size:cover;
+  background-position:center;
+  opacity:0;
+  transform:scale(1.08);
+  filter:grayscale(.15) saturate(1.1);
+  transition:opacity .4s ease, transform .5s cubic-bezier(0.16,1,0.3,1);
+  pointer-events:none;
+  z-index:0;
+}
+.hv:hover .hv-bg{ opacity:.16; transform:scale(1); }
+
+/* ============================================================
+   4. MOSAICOS DE COLOR (celdas pegadas sin gap, sin overflow propio)
+   Aplica a: celdas de un grid de color contiguo (ej. franjas de
+   categorías, líneas de tiempo en bloques). Usa scale + brillo
+   en vez de elevación para no romper el mosaico.
+   ============================================================ */
+.hv-tile{
+  position:relative;
+  border:3px solid transparent;
+  transition:transform .25s cubic-bezier(0.16,1,0.3,1), filter .25s ease, border-color .25s ease;
+}
+.hv-tile:hover{
+  transform:scale(1.13);
+  filter:brightness(1.18) saturate(1.15);
+  border-color:var(--gold-400);
+  z-index:3;
+  box-shadow:0 0 24px -4px rgba(212,162,78,.6);
+}
+
+/* ============================================================
+   5. TEXTO — títulos y cifras grandes con glow dorado en hover
+   ============================================================ */
+.hv-text{
+  display:inline-block;
+  transition:color .2s ease, text-shadow .2s ease;
+}
+.hv-text:hover{
+  color:var(--gold-400);
+  text-shadow:0 0 18px rgba(212,162,78,.35);
+}
+/* si el título usa fuente serif/display, el hover queda un tono más oscuro */
+.h-display.hv-text:hover, .serif.hv-text:hover{
+  color:var(--gold-500, #d9a52a);
+}
+
+.hv-num{ transition:text-shadow .2s ease, transform .2s cubic-bezier(0.16,1,0.3,1); }
+.hv-num:hover{
+  text-shadow:0 0 30px rgba(212,162,78,.6);
+  transform:scale(1.06);
+}
+
+/* ============================================================
+   6. PILLS / ETIQUETAS
+   ============================================================ */
+.pill{ border:2px solid transparent; transition:transform .2s cubic-bezier(0.16,1,0.3,1), box-shadow .2s ease, background-color .2s ease; }
+.pill:hover{
+  transform:scale(1.05);
+  box-shadow:0 14px 26px -8px rgba(12,38,28,.45);
+}
+.pill:active{ transform:scale(1.02); }
+
+/* ============================================================
+   7. TABLAS MODERNAS
+   Aplica la clase .table-modern al <table>. Estructura esperada:
+   <table class="table-modern">
+     <thead><tr><th>...</th></tr></thead>
+     <tbody>
+       <tr><td>...</td></tr>
+       <tr class="total"><td>...</td></tr>  ← fila de totales (opcional)
+     </tbody>
+   </table>
+   ============================================================ */
+.table-modern{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-variant-numeric:tabular-nums;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 18px 40px -18px rgba(12,38,28,.3), 0 0 0 1px var(--line);
+}
+.table-modern thead th{
+  background:linear-gradient(135deg, var(--forest-800, #155234), var(--forest-700, #186a3f));
+  color:#fff;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:14px 14px;
+  text-align:left;
+  position:relative;
+}
+.table-modern thead th:first-child{ border-radius:14px 0 0 0; }
+.table-modern thead th:last-child{ border-radius:0 14px 0 0; }
+.table-modern thead tr{ position:relative; }
+.table-modern thead::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom:0;
+  height:2px;
+  background:linear-gradient(90deg, var(--gold-400), transparent 70%);
+}
+.table-modern tbody tr{ transition:background-color .2s ease, transform .2s ease; }
+.table-modern tbody tr:hover{ background:rgba(212,162,78,.1); }
+.table-modern td{
+  padding:11px 14px;
+  border-bottom:1px solid var(--line);
+  background:#fff;
+  transition:background-color .2s ease;
+}
+.table-modern tbody tr:hover td{ background:transparent; }
+.table-modern tbody tr:last-child td{ border-bottom:none; }
+.table-modern tr:nth-child(even) td{ background:var(--sand-100, #f4efe4); }
+.table-modern tbody tr:nth-child(even):hover td{ background:transparent; }
+.table-modern tr.total td{
+  background:linear-gradient(135deg, var(--gold-400), var(--gold-300));
+  font-weight:800;
+  color:var(--forest-950);
+  border-top:2px solid var(--forest-900);
+  border-bottom:none;
+}
+.table-modern tr.total:hover td{ background:linear-gradient(135deg, var(--gold-400), var(--gold-300)); }
+.table-modern tr.total td:first-child{ border-radius:0 0 0 14px; }
+.table-modern tr.total td:last-child{ border-radius:0 0 14px 0; }
+.table-modern tbody tr:last-child:not(.total) td:first-child{ border-radius:0 0 0 14px; }
+.table-modern tbody tr:last-child:not(.total) td:last-child{ border-radius:0 0 14px 0; }
+
+/* ============================================================
+   8. IMPRESIÓN — desactiva todo lo anterior al exportar a PDF
+   y evita que Chrome omita fondos/colores (bug muy común).
+   Copia esto dentro de tu propio @media print existente.
+   ============================================================ */
+@media print{
+  *{
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+    color-adjust:exact !important;
+  }
+  .frame::before{ display:none !important; }
+  .hv, .hv-glow, .hv-tile, .hv-text, .hv-num, .pill, .frame, .ph{
+    transition:none !important; transform:none !important; box-shadow:none !important; filter:none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce){
+  .frame:hover, .frame:hover .ph, .hv:hover, .hv-tile:hover, .hv-num:hover, .pill:hover{ transform:none !important; }
+}

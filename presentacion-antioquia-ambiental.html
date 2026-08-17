@@ -1,0 +1,2132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Piloto Ambiental Antioquia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{
+  --forest-950:#0a2418;
+  --forest-900:#0f3826;
+  --forest-800:#155234;
+  --forest-700:#186a3f;
+  --forest-600:#187a44;
+  --forest-500:#2ba85f;
+  --moss-400:#5cc084;
+  --sand-100:#f4efe4;
+  --sand-50:#faf7ef;
+  --paper:#fbf8f1;
+  --ink:#1c2420;
+  --ink-soft:#3d453f;
+  --gold-500:#d9a52a;
+  --gold-400:#e8b93f;
+  --gold-300:#f2cd6e;
+  --clay-500:#c04a28;
+  --sky-500:#177d93;
+  --line:#d9d2bf;
+  --shadow-lg: 0 30px 60px -20px rgba(10,36,24,.4);
+  --shadow-md: 0 14px 30px -10px rgba(10,36,24,.3);
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --slide-w: 1280px;
+  --slide-h: 720px;
+  --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, Arial, sans-serif;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+
+html{background:#0c261c;}
+
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  background:#0c261c;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+.deck{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:48px;
+  padding:48px 0 96px;
+}
+
+.slide{
+  position:relative;
+  width:var(--slide-w);
+  height:var(--slide-h);
+  max-width:calc(100vw - 24px);
+  aspect-ratio:16/9;
+  background:var(--paper);
+  overflow:hidden;
+  box-shadow:var(--shadow-lg);
+  border-radius:6px;
+  flex-shrink:0;
+  isolation:isolate;
+  opacity:0;
+  transform:translateY(36px) scale(.985);
+  transition:opacity .8s cubic-bezier(0.16,1,0.3,1), transform .8s cubic-bezier(0.16,1,0.3,1), box-shadow .3s ease;
+}
+.slide.in-view{
+  opacity:1;
+  transform:translateY(0) scale(1);
+}
+.slide.in-view:hover{ box-shadow:var(--shadow-lg), 0 0 60px -20px rgba(212,162,78,.25); }
+@media print{
+  .slide{ opacity:1 !important; transform:none !important; transition:none !important; }
+}
+@media (prefers-reduced-motion: reduce){
+  .slide{ opacity:1; transform:none; transition:none; }
+}
+
+@media (max-width:1320px){
+  .slide{ width:96vw; height:calc(96vw * 9 / 16); }
+}
+
+/* ============ TYPOGRAPHY ============ */
+.serif{ font-family:var(--serif); }
+
+.kicker{
+  font-family:var(--sans);
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  color:var(--gold-500);
+}
+.slide.on-color .kicker{ color:var(--gold-300); }
+
+.slide-num{
+  position:absolute;
+  bottom:24px;
+  right:30px;
+  font-family:var(--serif);
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink-soft);
+  opacity:.55;
+  letter-spacing:.05em;
+  z-index:20;
+}
+.slide-num b{ color:var(--gold-500); opacity:1; font-weight:700;}
+
+.brand-tag{
+  position:absolute;
+  top:24px;
+  left:30px;
+  font-size:10.5px;
+  font-weight:800;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  opacity:.45;
+  z-index:20;
+}
+
+/* dark variant */
+.slide.dark .brand-tag, .slide.dark .slide-num{ color:var(--sand-100); opacity:.6;}
+.slide.dark .slide-num b{ color:var(--gold-300); opacity:1;}
+
+/* ============ UTILITIES ============ */
+.eco-texture{
+  position:absolute; inset:0;
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(212,162,78,.12), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(61,135,99,.2), transparent 50%);
+  pointer-events:none;
+}
+.dot-grid{
+  position:absolute; inset:0; opacity:.14; pointer-events:none;
+  background-image:radial-gradient(circle, rgba(255,255,255,.5) 1px, transparent 1px);
+  background-size:26px 26px;
+}
+.dot-grid.on-light{ opacity:.5; background-image:radial-gradient(circle, rgba(26,77,58,.35) 1px, transparent 1px); }
+
+.big-num{
+  font-family:var(--serif);
+  font-weight:700;
+  letter-spacing:-.03em;
+  line-height:.86;
+}
+
+/* ============ PRINT ============ */
+@page{
+  size: 1280px 720px;
+  margin:0;
+}
+@media print{
+  *{
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+    color-adjust:exact !important;
+  }
+  html,body{ background:#fff; }
+  .deck{ padding:0; gap:0; }
+  .slide{
+    box-shadow:none;
+    border-radius:0;
+    width:1280px;
+    height:720px;
+    max-width:none;
+    page-break-after:always;
+    break-after:page;
+    page-break-inside:avoid;
+    break-inside:avoid;
+  }
+  .no-print{ display:none !important; }
+}
+
+/* ============ TOOLBAR ============ */
+.toolbar{
+  position:fixed;
+  top:18px; right:18px;
+  z-index:1000;
+  display:flex; gap:10px;
+}
+.toolbar button{
+  font-family:var(--sans);
+  font-size:13px;
+  font-weight:600;
+  padding:10px 18px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(12,38,28,.75);
+  color:#f4efe4;
+  backdrop-filter:blur(8px);
+  cursor:pointer;
+  letter-spacing:.02em;
+  transition:transform .15s ease, background .15s ease;
+}
+.toolbar button:hover{ background:rgba(45,106,79,.9); transform:translateY(-1px); }
+
+/* barra de navegacion: siempre visible (dentro y fuera de pantalla completa) */
+.nav-bar{
+  position:fixed;
+  bottom:24px; left:50%;
+  transform:translateX(-50%);
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:8px 10px;
+  border-radius:999px;
+  background:rgba(12,38,28,.78);
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(10px);
+  box-shadow:0 12px 32px -8px rgba(0,0,0,.5);
+}
+.nav-bar button{
+  font-family:var(--sans);
+  font-size:13px;
+  font-weight:600;
+  color:#f4efe4;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;
+  padding:8px 16px;
+  cursor:pointer;
+  letter-spacing:.02em;
+  transition:background .15s ease, transform .15s ease, opacity .15s ease;
+}
+.nav-bar button:hover{ background:rgba(45,106,79,.9); transform:translateY(-1px); }
+.nav-bar button:disabled{ opacity:.35; cursor:default; transform:none; background:rgba(255,255,255,.08); }
+#navCounterWrap{
+  font-family:var(--sans);
+  font-size:12px;
+  font-weight:700;
+  color:rgba(244,239,228,.65);
+  letter-spacing:.04em;
+  display:flex;
+  align-items:center;
+  gap:3px;
+}
+#navCounterInput{
+  font-family:var(--sans);
+  font-size:12px;
+  font-weight:700;
+  color:#f4efe4;
+  letter-spacing:.04em;
+  width:30px;
+  text-align:right;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:6px;
+  padding:3px 2px;
+  -moz-appearance:textfield;
+}
+#navCounterInput::-webkit-outer-spin-button,
+#navCounterInput::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+#navCounterInput:focus{ outline:2px solid var(--gold-400); outline-offset:1px; background:rgba(255,255,255,.14); }
+#navCounterInput:hover{ background:rgba(255,255,255,.14); }
+#exitFsBtn{
+  display:none;
+  margin-left:4px;
+  padding-left:14px;
+  border-left:1px solid rgba(255,255,255,.18);
+  border-radius:0 999px 999px 0;
+  background:transparent;
+}
+body.is-fullscreen #exitFsBtn{ display:inline-block; }
+#exitFsBtn:hover{ background:rgba(192,74,40,.55); }
+
+/* ============ SHARED SLIDE PARTS ============ */
+.pad{ padding:60px 68px; height:100%; }
+.pad-sm{ padding:48px 58px; height:100%;}
+.pad-lg{ padding:64px 76px; height:100%; }
+
+.h-display{
+  font-family:var(--serif);
+  font-weight:700;
+  line-height:.98;
+  letter-spacing:-.015em;
+  color:var(--forest-900);
+  text-wrap:balance;
+}
+.h-1{ font-size:64px; }
+.h-2{ font-size:46px; }
+.h-3{ font-size:30px; }
+
+.rule{
+  width:70px; height:5px;
+  background:var(--gold-400);
+  border-radius:4px;
+  margin:20px 0 24px;
+}
+.rule.center{ margin-left:auto; margin-right:auto;}
+.rule.on-color{ background:var(--gold-300); }
+
+.lede{
+  font-size:17px;
+  line-height:1.6;
+  color:var(--ink-soft);
+  font-weight:400;
+}
+
+/* pill/tag */
+.pill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 18px;
+  border-radius:999px;
+  background:var(--forest-800);
+  color:var(--sand-50);
+  font-size:11.5px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.pill.light{ background:rgba(255,255,255,.18); color:#fff; }
+.pill.gold{ background:var(--gold-400); color:var(--forest-950);}
+.pill.outline{ background:transparent; border:1.5px solid currentColor; }
+
+/* Cards */
+.card{
+  background:#fff;
+  border-radius:var(--radius-md);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow-md);
+}
+
+.stat-num{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:56px;
+  line-height:1;
+  color:var(--forest-800);
+  letter-spacing:-.02em;
+}
+.stat-label{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+  margin-top:8px;
+}
+
+/* image framing */
+.ph{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+}
+.frame{
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--radius-md);
+  border:2px solid transparent;
+  box-shadow:var(--shadow-md);
+  cursor:zoom-in;
+  transition:transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s ease, border-color .25s ease;
+}
+/* corner scan brackets - futuristic viewfinder look */
+.frame::after{
+  content:"";
+  position:absolute; inset:9px;
+  border-radius:calc(var(--radius-md) - 6px);
+  background:
+    linear-gradient(var(--gold-300),var(--gold-300)) top left,
+    linear-gradient(var(--gold-300),var(--gold-300)) top left,
+    linear-gradient(var(--gold-300),var(--gold-300)) top right,
+    linear-gradient(var(--gold-300),var(--gold-300)) top right,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom left,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom left,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom right,
+    linear-gradient(var(--gold-300),var(--gold-300)) bottom right;
+  background-size:2px 16px, 16px 2px;
+  background-repeat:no-repeat;
+  opacity:0;
+  transform:scale(.92);
+  transition:opacity .3s ease, transform .35s cubic-bezier(0.16,1,0.3,1);
+  pointer-events:none;
+  z-index:2;
+  filter:drop-shadow(0 0 6px rgba(227,189,119,.7));
+}
+.frame::before{
+  content:"⤢";
+  position:absolute;
+  top:12px; right:12px;
+  width:34px; height:34px;
+  border-radius:50%;
+  background:rgba(12,38,28,.6);
+  color:#fff;
+  font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0;
+  transform:translateY(-6px) scale(.8);
+  transition:opacity .25s ease, transform .25s cubic-bezier(0.16,1,0.3,1);
+  pointer-events:none;
+  z-index:3;
+  backdrop-filter:blur(4px);
+  box-shadow:0 0 0 1px rgba(227,189,119,.4);
+}
+.frame:hover{
+  transform:scale(1.1);
+  box-shadow:0 36px 60px -14px rgba(12,38,28,.6), 0 0 0 1px rgba(212,162,78,.25), 0 0 34px -6px rgba(212,162,78,.5);
+  border-color:var(--gold-400);
+  z-index:3;
+}
+.frame:hover .ph{ transform:scale(1.16); filter:saturate(1.12) brightness(1.03); }
+.frame:hover::after{ opacity:1; transform:scale(1); }
+.frame:hover::before{ opacity:1; transform:translateY(0) scale(1); }
+.frame:active{ transform:scale(1.05); }
+.frame:focus-visible{ outline:3px solid var(--gold-400); outline-offset:2px; }
+.ph{ transition:transform .4s cubic-bezier(0.16,1,0.3,1), filter .3s ease; }
+
+/* hover-elevate: generic interactive block (colored panels, text blocks) */
+.hv{
+  position:relative;
+  border:2px solid transparent;
+  transition:transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s ease, background-color .25s ease, border-color .25s ease;
+}
+/* ambient glow ring, sits behind the card */
+.hv::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:inherit;
+  background:conic-gradient(from 180deg, var(--gold-300), transparent 30%, transparent 70%, var(--gold-300));
+  opacity:0;
+  z-index:-1;
+  filter:blur(10px);
+  transition:opacity .35s ease;
+  pointer-events:none;
+}
+/* faint themed background image revealed on hover, sits under content (optional, opt-in per card) */
+.hv-bg{
+  position:absolute; inset:0;
+  background-size:cover;
+  background-position:center;
+  opacity:0;
+  transform:scale(1.08);
+  filter:grayscale(.15) saturate(1.1);
+  transition:opacity .4s ease, transform .5s cubic-bezier(0.16,1,0.3,1);
+  pointer-events:none;
+  z-index:0;
+}
+.hv:hover .hv-bg{ opacity:.16; transform:scale(1); }
+
+/* auto circuit-pattern reveal for plain color cards (no image needed) */
+.hv-glow{ --mx:50%; --my:50%; }
+.hv-glow::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:inherit;
+  background-image:radial-gradient(circle 220px at var(--mx) var(--my), rgba(255,255,255,.14), transparent 70%);
+  opacity:0;
+  transition:opacity .4s ease, --mx .15s linear, --my .15s linear;
+  pointer-events:none;
+  z-index:-1;
+}
+.hv-glow:hover::after{ opacity:1; }
+@property --mx{ syntax:'<percentage>'; inherits:true; initial-value:50%; }
+@property --my{ syntax:'<percentage>'; inherits:true; initial-value:50%; }
+
+.hv:hover{
+  transform:scale(1.1) translateY(-4px);
+  box-shadow:0 34px 55px -14px rgba(12,38,28,.45), 0 0 0 1px rgba(212,162,78,.2);
+  z-index:3;
+}
+.hv:hover::before{ opacity:.55; }
+.hv:active{ transform:scale(1.04) translateY(-1px); }
+.hv:focus-visible{ outline:3px solid var(--gold-400); outline-offset:2px; }
+
+.hv-glow:hover{ border-color:var(--gold-400); }
+
+/* hv-tile: for mosaic cells inside an overflow:hidden grid (short scale + border + brighten) */
+.hv-tile{
+  position:relative;
+  border:3px solid transparent;
+  transition:transform .25s cubic-bezier(0.16,1,0.3,1), filter .25s ease, border-color .25s ease;
+}
+.hv-tile:hover{
+  transform:scale(1.13);
+  filter:brightness(1.18) saturate(1.15);
+  border-color:var(--gold-400);
+  z-index:3;
+  box-shadow:0 0 24px -4px rgba(212,162,78,.6);
+}
+.hv-tile:hover .card-bg{ opacity:.55; transform:scale(1.08); }
+.hv-tile:hover .card-bg.on-light{ opacity:.32; }
+
+/* tarjeta de problematica: foto de fondo + acento dorado, en linea con el resto */
+.issue-card{
+  position:relative;
+  overflow:hidden;
+  height:158px;
+  border-radius:16px;
+  background:var(--forest-900);
+  border:2px solid transparent;
+  box-shadow:var(--shadow-md);
+  transition:transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s ease, border-color .25s ease;
+}
+.issue-card .card-veil{
+  background:linear-gradient(0deg, rgba(10,36,24,.95) 12%, rgba(10,36,24,.72) 58%, rgba(10,36,24,.5) 100%);
+}
+.issue-card .card-content{
+  justify-content:flex-end;
+  padding:20px 17px;
+}
+.issue-num{
+  font-family:var(--serif);
+  font-size:13px;
+  font-weight:700;
+  color:var(--gold-300);
+  letter-spacing:.06em;
+  display:block;
+  margin-bottom:auto;
+}
+.issue-title{
+  font-size:13px;
+  font-weight:800;
+  color:#fff;
+  line-height:1.35;
+}
+.issue-desc{
+  font-size:10.5px;
+  color:rgba(255,255,255,.78);
+  margin-top:7px;
+  line-height:1.5;
+}
+/* linea dorada que crece desde la izquierda al pasar el mouse */
+.issue-card::after{
+  content:"";
+  position:absolute;
+  left:17px; right:17px; bottom:0;
+  height:3px;
+  background:var(--gold-400);
+  transform:scaleX(0);
+  transform-origin:left center;
+  transition:transform .4s cubic-bezier(0.16,1,0.3,1);
+  z-index:3;
+}
+.issue-card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 26px 44px -14px rgba(12,38,28,.5), 0 0 0 1px rgba(212,162,78,.2);
+  border-color:var(--gold-400);
+  z-index:3;
+}
+.issue-card:hover::after{ transform:scaleX(1); }
+.issue-card:hover .card-bg{ opacity:.6; transform:scale(1.08); }
+@media (prefers-reduced-motion: reduce){
+  .issue-card, .issue-card:hover{ transform:none; }
+  .issue-card::after{ transition:none; }
+}
+
+/* encuadre: elegir que parte de la foto se ve cuando se recorta */
+.ph.pos-top{ object-position:center 18%; }
+.ph.pos-bottom{ object-position:center 82%; }
+.ph.pos-center-low{ object-position:center 62%; }
+.ph.pos-left{ object-position:22% center; }
+.ph.pos-right{ object-position:78% center; }
+
+/* imagen de fondo desvanecida dentro de una tarjeta .hv */
+.card-bg{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover;
+  opacity:.42;
+  z-index:0;
+  transition:opacity .4s ease, transform .5s cubic-bezier(0.16,1,0.3,1);
+  pointer-events:none;
+}
+.card-veil{
+  position:absolute; inset:0;
+  z-index:1;
+  pointer-events:none;
+}
+/* contenido de la tarjeta: siempre por encima de imagen y velo */
+.card-content{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:inherit;
+}
+.hv:hover .card-bg{ opacity:.58; transform:scale(1.07); }
+/* variante para tarjetas de fondo claro (dorado): imagen mas tenue */
+.card-bg.on-light{ opacity:.2; }
+.hv:hover .card-bg.on-light{ opacity:.3; }
+
+/* mapa ilustrado de portada: solo hover con zoom notable, sin clic */
+.hv-map-frame{
+  cursor:default;
+  transition:transform .2s ease-in-out;
+}
+.hv-map-frame:hover{
+  transform:scale(1.12);
+}
+.hv-map-frame .ph{
+  transition:transform .2s ease-in-out, filter .2s ease-in-out;
+  filter:drop-shadow(0 0px 0px rgba(0,0,0,0));
+}
+.hv-map-frame:hover .ph{
+  filter:drop-shadow(0 24px 50px rgba(0,0,0,.65));
+}
+
+/* mapa de comunas de Medellin (slide 14): solo hover suave, sin clic */
+.medellin-map-frame{
+  box-shadow:var(--shadow-md);
+  border:2px solid transparent;
+  filter:drop-shadow(0 0px 0px rgba(0,0,0,0));
+  transition:box-shadow 1.6s ease-in-out, border-color 1.6s ease-in-out, filter 1.6s ease-in-out;
+}
+.medellin-map-frame:hover{
+  box-shadow:0 36px 60px -14px rgba(12,38,28,.6), 0 0 0 1px rgba(212,162,78,.25);
+  border-color:var(--gold-400);
+  filter:drop-shadow(0 0 34px -6px rgba(212,162,78,.5));
+}
+.medellin-map-frame .ph{
+  transition:transform 1.6s ease-in-out;
+}
+.medellin-map-frame:hover .ph{
+  transform:scale(1.08);
+}
+@media (prefers-reduced-motion: reduce){
+  .medellin-map-frame, .medellin-map-frame:hover, .medellin-map-frame .ph, .medellin-map-frame:hover .ph{ transform:none !important; transition:none; }
+}
+@media (prefers-reduced-motion: reduce){
+  .hv-map-frame, .hv-map-frame:hover{ transform:none !important; transition:none; }
+}
+
+/* text hover: resplandor dorado que sigue el mouse, sin tocar el color/relleno del texto */
+.hv-text{
+  display:inline-block;
+  position:relative;
+}
+/* capa dorada superpuesta: mismo texto, color dorado, revelada solo cerca del cursor via mask */
+.hv-text-glow-layer{
+  position:absolute;
+  inset:0;
+  color:var(--gold-400);
+  pointer-events:none;
+  opacity:0;
+  --gx:50%; --gy:50%;
+  -webkit-mask-image:radial-gradient(circle 130px at var(--gx) var(--gy), #000 0%, transparent 75%);
+  mask-image:radial-gradient(circle 130px at var(--gx) var(--gy), #000 0%, transparent 75%);
+  transition:opacity .35s ease;
+}
+.hv-text-active .hv-text-glow-layer{
+  opacity:1;
+}
+
+/* number glow on hover */
+.hv-num{ transition:text-shadow .2s ease, transform .2s cubic-bezier(0.16,1,0.3,1); }
+.hv-num:hover{
+  text-shadow:0 0 30px rgba(212,162,78,.6);
+  transform:scale(1.06);
+}
+
+/* pill hover */
+.pill{ border:2px solid transparent; transition:transform .2s cubic-bezier(0.16,1,0.3,1), box-shadow .2s ease, background-color .2s ease; }
+.pill:hover{
+  transform:scale(1.05);
+  box-shadow:0 14px 26px -8px rgba(12,38,28,.45);
+}
+.pill:active{ transform:scale(1.02); }
+
+@media print{
+  .frame::before{ display:none !important; }
+  .hv, .hv-glow, .hv-tile, .hv-text, .hv-num, .pill, .frame, .ph{ transition:none !important; transform:none !important; box-shadow:none !important; filter:none !important; }
+}
+@media (prefers-reduced-motion: reduce){
+  .frame:hover, .frame:hover .ph, .hv:hover, .hv-tile:hover, .hv-num:hover, .pill:hover{ transform:none !important; }
+}
+
+/* footer credit line */
+.foot-line{
+  position:absolute;
+  bottom:24px; left:30px;
+  font-size:10px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  font-weight:700;
+  color:var(--ink-soft);
+  opacity:.5;
+  z-index:20;
+}
+.slide.dark .foot-line{ color:var(--sand-100); }
+
+/* numbered marker circle */
+.marker{
+  width:40px; height:40px;
+  border-radius:50%;
+  background:var(--forest-800);
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:16px;
+  flex-shrink:0;
+}
+
+/* table */
+.table-modern{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:12.5px;
+  font-variant-numeric:tabular-nums;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 18px 40px -18px rgba(12,38,28,.3), 0 0 0 1px var(--line);
+}
+.table-modern thead th{
+  background:linear-gradient(135deg, var(--forest-800), var(--forest-700));
+  color:#fff;
+  font-weight:800;
+  font-size:10.5px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:14px 14px;
+  text-align:left;
+  position:relative;
+}
+.table-modern thead th:first-child{ border-radius:14px 0 0 0; }
+.table-modern thead th:last-child{ border-radius:0 14px 0 0; }
+.table-modern thead tr{ position:relative; }
+.table-modern thead::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom:0;
+  height:2px;
+  background:linear-gradient(90deg, var(--gold-400), transparent 70%);
+}
+.table-modern tbody tr{ transition:background-color .2s ease, transform .2s ease; }
+.table-modern td{
+  padding:11px 14px;
+  border-bottom:1px solid var(--line);
+  color:var(--ink);
+  background:#fff;
+  transition:background-color .2s ease;
+}
+.table-modern tbody tr:hover td{ background:var(--gold-300); }
+.table-modern tr:nth-child(even) td{ background:var(--sand-100); }
+.table-modern tbody tr:nth-child(even):hover td{ background:var(--gold-300); }
+.table-modern tr.total td{
+  background:linear-gradient(135deg, var(--gold-400), var(--gold-300));
+  font-weight:800;
+  color:var(--forest-950);
+  border-top:2px solid var(--forest-900);
+  border-bottom:none;
+}
+.table-modern tr.total:hover td{ background:linear-gradient(135deg, var(--gold-400), var(--gold-300)); }
+.table-modern tr.total td:first-child{ border-radius:0 0 0 14px; }
+.table-modern tr.total td:last-child{ border-radius:0 0 14px 0; }
+.table-modern tbody tr:last-child:not(.total) td:first-child{ border-radius:0 0 0 14px; }
+.table-modern tbody tr:last-child:not(.total) td:last-child{ border-radius:0 0 14px 0; }
+
+/* huge fraction-style number block */
+.num-block{ display:flex; align-items:center; gap:14px; }
+.num-block .n{ font-family:var(--serif); font-weight:700; letter-spacing:-.03em; line-height:.85; }
+.num-block .t{ font-size:13px; font-weight:700; line-height:1.4; }
+
+::selection{ background:var(--gold-400); color:var(--forest-950); }
+
+/* ============ IN-PLACE ZOOM (click to enlarge, no dimming) ============ */
+.frame.zoomed{
+  transform:scale(1.4) !important;
+  z-index:50 !important;
+  box-shadow:0 40px 80px -16px rgba(12,38,28,.6), 0 0 0 3px var(--gold-400) !important;
+  cursor:zoom-out;
+}
+.frame.zoomed .ph{ transform:scale(1) !important; }
+.frame.zoomed::before{ opacity:0 !important; }
+@media print{ .frame.zoomed{ transform:none !important; box-shadow:var(--shadow-md) !important; } }
+/* flecha conectora entre tarjetas de linea de tiempo */
+.timeline-arrow{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--gold-500);
+  font-size:26px;
+  font-weight:700;
+  opacity:.7;
+}
+
+/* chip de area (lista plana, sin encabezados de tabla repetidos) */
+.area-chip{
+  background:var(--forest-800);
+  color:#fff;
+  font-size:12px;
+  font-weight:600;
+  padding:11px 14px;
+  border-radius:9px;
+  line-height:1.3;
+  display:flex;
+  align-items:center;
+}
+.area-chip-highlight{
+  background:var(--gold-400);
+  color:var(--forest-950);
+  font-weight:800;
+  justify-content:center;
+}
+
+/* mapa de comunas: columna angosta - el clic amplia la imagen y permite desplazarse (pan) dentro del marco fijo */
+.frame-map-contained.zoomed{
+  transform:none !important;
+  box-shadow:0 0 0 3px var(--gold-400) !important;
+  z-index:50 !important;
+  overflow:auto !important;
+  cursor:grab;
+}
+.frame-map-contained.zoomed:active{ cursor:grabbing; }
+.frame-map-contained.zoomed .ph{
+  transform:none !important;
+  width:220% !important;
+  height:220% !important;
+  max-width:none !important;
+  object-fit:contain !important;
+}
+.frame-map-contained.zoomed::before{ opacity:0 !important; }
+.frame-map-contained .zoom-hint{
+  position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+  background:rgba(12,38,28,.75); color:#fff; font-size:11px; font-weight:700;
+  padding:6px 14px; border-radius:999px; opacity:0; transition:opacity .3s ease;
+  pointer-events:none; z-index:5; letter-spacing:.02em; backdrop-filter:blur(4px);
+}
+.frame-map-contained.zoomed .zoom-hint{ opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <button id="fullscreenBtn" onclick="document.documentElement.requestFullscreen();">⛶ Pantalla completa</button>
+  <button id="downloadPdfBtn" onclick="window.print();">⬇ Descargar en PDF</button>
+</div>
+
+<div class="nav-bar no-print" id="navBar">
+  <button id="prevBtn" aria-label="Slide anterior">‹</button>
+  <span id="navCounterWrap"><input type="number" id="navCounterInput" min="1" value="1" aria-label="Ir a la diapositiva"> / <span id="navTotal">26</span></span>
+  <button id="nextBtn" aria-label="Slide siguiente">Siguiente ›</button>
+  <button id="exitFsBtn" aria-label="Salir de pantalla completa" onclick="document.exitFullscreen();">Salir ✕</button>
+</div>
+
+<main class="deck" id="deck">
+
+<!-- ============================================================ -->
+<!-- SLIDE 1 — PORTADA -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:linear-gradient(160deg, var(--forest-950) 0%, var(--forest-800) 55%, var(--forest-600) 100%);">
+  <div class="eco-texture"></div>
+  <div class="dot-grid"></div>
+
+  <div class="pad-lg" style="display:flex; flex-direction:column; justify-content:center; gap:34px; position:relative; z-index:3; width:56%; max-width:660px;">
+    <div>
+      <div class="pill light">Departamento de Antioquia · Colombia</div>
+      <h1 class="serif hv-text" style="font-size:56px; font-weight:700; color:#fff; line-height:1.04; margin-top:24px; letter-spacing:-.02em;">
+        Proyecto Piloto Ambiental Departamental de Antioquia
+      </h1>
+      <div style="display:flex; align-items:center; gap:16px; margin-top:20px;">
+        <div style="height:3px; width:56px; background:var(--gold-400); flex-shrink:0;"></div>
+        <p class="serif" style="font-size:24px; font-style:italic; color:var(--gold-300); font-weight:400;">Con impacto mundial</p>
+      </div>
+    </div>
+
+    <div>
+      <p style="color:var(--sand-100); font-size:13px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; margin-bottom:10px;">Campaña de sensibilización y concientización</p>
+      <p style="color:rgba(255,255,255,.82); font-size:14.5px; line-height:1.75;">
+        Hacia la educación y cultura ambiental, propiciando crecimiento nacional e internacional: una estrategia para favorecer la calidad de vida de las generaciones presentes y futuras.
+      </p>
+    </div>
+  </div>
+
+  <div style="position:absolute; right:44px; top:12%; height:76%; width:46%; z-index:2; display:flex; align-items:center;">
+    <div class="hv-map-frame" style="width:100%; height:100%; position:relative;">
+      <img class="ph" data-img="mapAntioquia" alt="Mapa de las subregiones de Antioquia con iconos ambientales"
+           style="object-fit:contain; background:transparent;">
+    </div>
+  </div>
+  <div class="slide-num"><b>01</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2 — LINEAS ESTRATEGICAS -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--forest-900);">
+  <div class="brand-tag" style="color:var(--sand-100); opacity:.5;">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%; position:relative; z-index:2;">
+    <span class="kicker" style="color:var(--gold-300);">Marco estratégico</span>
+    <h2 class="serif hv-text" style="font-size:44px; font-weight:700; color:#fff; margin-top:10px; line-height:1;">Tres líneas que articulan el proyecto</h2>
+    <div class="rule on-color"></div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; margin-top:8px; flex:1;">
+      <div class="hv" style="position:relative; background:var(--forest-700); overflow:hidden; border-radius:16px 0 0 16px;">
+        <img class="ph card-bg" data-img="investigacion" alt="Investigación ambiental">
+        <div class="card-veil" style="background:linear-gradient(0deg, var(--forest-950) 15%, transparent 65%);"></div>
+        <div style="position:relative; z-index:2; height:100%; display:flex; flex-direction:column; justify-content:flex-end; padding:28px 26px;">
+          <span class="serif" style="font-size:15px; color:var(--gold-300); font-weight:700;">01</span>
+          <p class="serif" style="font-weight:700; font-size:24px; color:#fff; margin-top:6px;">Investigación</p>
+          <p style="font-size:12.5px; color:rgba(255,255,255,.85); line-height:1.55; margin-top:8px;">Base fundamental para la búsqueda de soluciones a las problemáticas ambientales.</p>
+        </div>
+      </div>
+      <div class="hv" style="position:relative; background:var(--forest-600); overflow:hidden;">
+        <img class="ph card-bg" data-img="innovacionDinero" alt="Innovación y emprendimiento">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(12,38,28,.85) 0%, rgba(12,38,28,.55) 42%, transparent 72%);"></div>
+        <div style="position:relative; z-index:2; height:100%; display:flex; flex-direction:column; justify-content:flex-end; padding:28px 26px;">
+          <span class="serif" style="font-size:15px; color:var(--gold-300); font-weight:800;">02</span>
+          <p class="serif" style="font-weight:800; font-size:24px; color:#fff; margin-top:6px;">Innovación</p>
+          <p style="font-size:12.5px; color:rgba(255,255,255,.9); line-height:1.55; margin-top:8px; font-weight:600;">Brindarle el valor ganado al emprendimiento ambiental.</p>
+        </div>
+      </div>
+      <div class="hv" style="position:relative; background:var(--forest-700); overflow:hidden; border-radius:0 16px 16px 0;">
+        <img class="ph card-bg" data-img="creatividadGlobo" alt="Creatividad y participación">
+        <div class="card-veil" style="background:linear-gradient(0deg, var(--forest-950) 15%, transparent 65%);"></div>
+        <div style="position:relative; z-index:2; height:100%; display:flex; flex-direction:column; justify-content:flex-end; padding:28px 26px;">
+          <span class="serif" style="font-size:15px; color:var(--gold-300); font-weight:700;">03</span>
+          <p class="serif" style="font-weight:700; font-size:24px; color:#fff; margin-top:6px;">Creatividad</p>
+          <p style="font-size:12.5px; color:rgba(255,255,255,.85); line-height:1.55; margin-top:8px;">Motiva la participación de actores sociales, económicos y ambientales.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:22px; display:flex; align-items:center; gap:18px;">
+      <div style="height:2px; flex-shrink:0; width:44px; background:var(--gold-400);"></div>
+      <p style="color:rgba(255,255,255,.85); font-size:14.5px; font-weight:500; line-height:1.5;">Se articula con el <span style="color:var(--gold-300); font-weight:700;">Plan de Desarrollo Departamental y Municipal</span>, logrando una articulación para el desarrollo sostenible que apoya proyectos piloto de líderes emprendedores.</p>
+    </div>
+  </div>
+  <div class="slide-num" style="color:var(--sand-100); opacity:.6;"><b style="color:var(--gold-300); opacity:1;">02</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3 — RESEÑA HISTORICA -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Trayectoria</span>
+    <h2 class="h-display hv-text" style="font-size:50px; margin-top:10px;">Reseña histórica</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:14px; flex:1; align-items:stretch; margin-top:14px;">
+      <div class="hv hv-glow" style="background:var(--forest-800); border-radius:20px; padding:32px 28px; display:flex; flex-direction:column; justify-content:flex-end; position:relative; overflow:hidden;">
+        <img class="ph card-bg" data-img="ninosCirculo" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, var(--forest-950) 8%, rgba(15,56,38,.72) 55%, rgba(15,56,38,.45) 100%);"></div>
+        <span class="big-num hv-num" style="font-size:80px; color:rgba(255,255,255,.16); position:absolute; top:14px; right:20px; z-index:2;">2011</span>
+        <div style="position:relative; z-index:2;">
+          <p style="color:var(--gold-300); font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;">I Concurso</p>
+          <p class="serif" style="font-weight:700; color:#fff; font-size:20px; margin-top:8px; line-height:1.25;">Comuna 16, Belén</p>
+        </div>
+      </div>
+      <div class="timeline-arrow" aria-hidden="true">→</div>
+      <div class="hv hv-glow" style="background:var(--forest-700); border-radius:20px; padding:32px 28px; display:flex; flex-direction:column; justify-content:flex-end; position:relative; overflow:hidden;">
+        <img class="ph card-bg" data-img="mesaTrabajo" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, var(--forest-950) 8%, rgba(24,106,63,.7) 55%, rgba(24,106,63,.42) 100%);"></div>
+        <span class="big-num hv-num" style="font-size:80px; color:rgba(255,255,255,.16); position:absolute; top:14px; right:20px; z-index:2;">2012</span>
+        <div style="position:relative; z-index:2;">
+          <p style="color:var(--gold-300); font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;">II Concurso</p>
+          <p class="serif" style="font-weight:700; color:#fff; font-size:20px; margin-top:8px; line-height:1.25;">Piloto Ciudad</p>
+        </div>
+      </div>
+      <div class="timeline-arrow" aria-hidden="true">→</div>
+      <div class="hv hv-glow" style="background:var(--forest-900); border-radius:20px; padding:32px 28px; display:flex; flex-direction:column; justify-content:flex-end; position:relative; overflow:hidden; box-shadow:0 20px 40px -14px rgba(12,38,28,.5);">
+        <img class="ph card-bg" data-img="manosDiversidad" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, var(--forest-950) 10%, rgba(10,36,24,.86) 55%, rgba(10,36,24,.68) 100%);"></div>
+        <div style="position:relative; z-index:2;">
+          <p style="color:var(--gold-300); font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase;">III Concurso</p>
+          <p class="serif" style="font-weight:700; color:#fff; font-size:20px; margin-top:8px; line-height:1.25;">Innovación y Creatividad Ambiental</p>
+          <p style="font-size:12.5px; color:rgba(255,255,255,.8); margin-top:10px; line-height:1.5; font-weight:600;">Desfile "Huella Ambiental" en los 125 municipios.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:14px; margin-top:22px; flex-wrap:wrap; align-items:center;">
+      <span style="font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft);">Articulación:</span>
+      <div class="pill" style="background:var(--forest-700);">Delegada de P.P · Mesa Ambiental 16</div>
+      <div class="pill" style="background:var(--forest-700);">Red de Mesas Ambientales de Medellín</div>
+      <div class="pill gold">Comisión de Investigación, Innovación y Creatividad</div>
+    </div>
+  </div>
+  <div class="slide-num"><b>03</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 4 — LA GRAN OPORTUNIDAD (marco legal) -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:linear-gradient(135deg, var(--forest-900), var(--forest-700));">
+  <div class="eco-texture"></div>
+  <div class="pad-lg" style="position:relative; z-index:2; display:grid; grid-template-columns:1.15fr .85fr; gap:56px; align-items:center; height:100%;">
+    <div>
+      <span class="kicker">Marco legal · Ley 1289 de 2009</span>
+      <h2 class="serif hv-text" style="font-size:54px; color:#fff; font-weight:700; line-height:.98; margin-top:14px; text-wrap:balance;">¡Esta es la gran oportunidad!</h2>
+      <div class="rule on-color"></div>
+      <p style="color:rgba(255,255,255,.82); font-size:16px; line-height:1.65; margin-top:8px;">
+        Fortalecer el Sistema Nacional de Ciencia y Tecnología e Innovación, para lograr un modelo productivo de mayor valor agregado a los productos y servicios de la economía nacional.
+      </p>
+      <div style="margin-top:30px; border-left:4px solid var(--gold-400); padding-left:20px;">
+        <p class="serif" style="font-style:italic; font-size:19px; color:var(--gold-300); line-height:1.5;">
+          "Permítanme abrir este camino, ya que seguirán otros líderes y lideresas con grandes ideas brindando soluciones a las problemáticas ambientales."
+        </p>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div class="frame" style="height:170px; grid-column:1/3;"><img class="ph" data-img="collageAgro" alt="Producción agropecuaria de Antioquia"></div>
+      <div class="frame" style="height:180px;"><img class="ph" data-img="dineroPasto" alt="Valor agregado económico"></div>
+      <div class="frame" style="height:180px;"><img class="ph" data-img="fruteria" alt="Economía de productos locales"></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>04</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 5 — ANTECEDENTES / JUSTIFICACIÓN -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div style="display:grid; grid-template-columns:1fr 1.15fr; height:100%; min-height:0;">
+    <div class="frame" style="border-radius:0;">
+      <img class="ph" data-img="tierraEnferma" alt="Cambio climático y planeta" style="object-position:68% 62%;">
+      <div style="position:absolute; inset:0; background:linear-gradient(0deg, rgba(12,38,28,.85), rgba(12,38,28,.15) 55%);"></div>
+      <div style="position:absolute; bottom:40px; left:40px; right:40px;">
+        <span class="kicker" style="color:var(--gold-300);">Antecedentes</span>
+        <h2 class="serif hv-text" style="font-size:44px; color:#fff; font-weight:700; margin-top:8px; line-height:.98;">Justificación</h2>
+      </div>
+    </div>
+    <div class="pad-lg" style="display:flex; flex-direction:column; justify-content:center;">
+      <p class="lede" style="font-size:16px; line-height:1.75;">
+        Los efectos previsibles del <b style="color:var(--forest-800); font-size:19px;">cambio climático</b> afectan al planeta desde la década de 1990, producto del crecimiento demográfico y las actividades antrópicas: industrialización promotora de gases de efecto invernadero, consumo excesivo de fuentes energéticas no renovables, contaminación de aguas de mares y ríos, y destrucción masiva de ecosistemas selváticos.
+      </p>
+      <p class="lede" style="font-size:16px; line-height:1.75; margin-top:16px;">
+        La creciente urbanización ha provocado desequilibrios en la calidad del agua y el aire de las grandes ciudades — poniendo en jaque la vida humana sobre el planeta.
+      </p>
+      <div style="display:flex; gap:10px; margin-top:26px; flex-wrap:wrap;">
+        <span class="pill" style="background:var(--clay-500);">Gases efecto invernadero</span>
+        <span class="pill" style="background:var(--sky-500);">Contaminación hídrica</span>
+        <span class="pill" style="background:var(--forest-700);">Pérdida de ecosistemas</span>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num" style="color:var(--ink-soft);"><b>05</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 6 — OBJETIVO GENERAL -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:var(--forest-800);">
+  <div class="eco-texture"></div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%; position:relative; z-index:2;">
+    <span class="kicker">¿Por qué se quiere hacer? · Identificación del problema</span>
+    <h2 class="serif hv-text" style="font-size:32px; color:var(--gold-300); font-weight:700; margin-top:10px;">Objetivo general</h2>
+
+    <div style="display:grid; grid-template-columns:1.2fr .8fr; gap:44px; align-items:center; flex:1; margin-top:6px;">
+      <p class="serif" style="color:#fff; font-size:38px; font-weight:700; line-height:1.15; text-wrap:balance;">
+        Sensibilizar y concientizar a la <span style="color:var(--gold-300);">población antioqueña</span>, promoviendo la educación y cultura ambiental para el cuidado y conservación de nuestro planeta.
+      </p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="frame" style="height:140px;"><img class="ph" data-img="manosEcolo" alt="Participación ciudadana"></div>
+        <div class="frame" style="height:140px;"><img class="ph" data-img="planetaManos" alt="Cuidado del planeta"></div>
+        <div class="frame" style="height:140px; grid-column:1/3;"><img class="ph" data-img="tresMundos" alt="Educación ambiental"></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>06</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 7 — PROBLEMATICAS AMBIENTALES -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Diagnóstico territorial</span>
+    <h2 class="h-display hv-text" style="font-size:42px; margin-top:10px;">Problemáticas ambientales del departamento</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-top:16px; flex-shrink:0;">
+      <div class="issue-card">
+        <img class="ph card-bg pos-center-low" data-img="quebradaContam" alt="">
+        <div class="card-veil"></div>
+        <div class="card-content">
+          <span class="issue-num">01</span>
+          <p class="issue-title">Agotamiento de recursos naturales</p>
+          <p class="issue-desc">Agua, aire, flora y fauna en riesgo.</p>
+        </div>
+      </div>
+      <div class="issue-card">
+        <img class="ph card-bg pos-center-low" data-img="mineria" alt="">
+        <div class="card-veil"></div>
+        <div class="card-content">
+          <span class="issue-num">02</span>
+          <p class="issue-title">Contaminación de suelos y aguas</p>
+          <p class="issue-desc">Minería ilegal y mal manejo de residuos.</p>
+        </div>
+      </div>
+      <div class="issue-card">
+        <img class="ph card-bg pos-center-low" data-img="basuralAgua" alt="">
+        <div class="card-veil"></div>
+        <div class="card-content">
+          <span class="issue-num">03</span>
+          <p class="issue-title">Falta de planificación ambiental</p>
+          <p class="issue-desc">Se requieren nuevas estrategias territoriales.</p>
+        </div>
+      </div>
+      <div class="issue-card">
+        <img class="ph card-bg pos-center-low" data-img="ninosAula" alt="">
+        <div class="card-veil"></div>
+        <div class="card-content">
+          <span class="issue-num">04</span>
+          <p class="issue-title">Baja cultura ambiental</p>
+          <p class="issue-desc">Bajos niveles de educación de pobladores.</p>
+        </div>
+      </div>
+      <div class="issue-card">
+        <img class="ph card-bg pos-center-low" data-img="equipoOficina" alt="">
+        <div class="card-veil"></div>
+        <div class="card-content">
+          <span class="issue-num">05</span>
+          <p class="issue-title">Débil articulación institucional</p>
+          <p class="issue-desc">CORNARE, CORANTIOQUIA, CORPOURABÁ, Área Metropolitana.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-top:20px; align-items:stretch; flex:1; min-height:0;">
+      <div class="frame"><img class="ph pos-bottom" data-img="industriaContam" alt="Contaminación industrial"></div>
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--forest-900); border-radius:var(--radius-md); padding:26px 30px; display:flex; align-items:center;">
+        <img class="ph card-bg" data-img="tala" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.9) 6%, rgba(15,56,38,.62) 55%, rgba(15,56,38,.38) 100%);"></div>
+        <div class="card-content">
+        <p style="color:#fff; font-size:15px; line-height:1.65;">Es necesario fortalecer el control al <b style="color:var(--gold-300);">transporte de madera ilegal</b> y de bosques nativos, aún en áreas protegidas.</p>
+      
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>07</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 8 — GALERIA DE IMPACTO (collage fotografico) -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:var(--forest-950);">
+  <div class="pad-sm" style="height:100%; display:flex; flex-direction:column;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+      <div>
+        <span class="kicker">La evidencia visual</span>
+        <h2 class="serif hv-text" style="color:#fff; font-size:38px; font-weight:700; margin-top:6px; line-height:1;">El costo ambiental de la inacción</h2>
+      </div>
+      <p style="color:rgba(255,255,255,.55); font-size:12.5px; max-width:280px; text-align:right; line-height:1.5;">Deforestación, minería, contaminación hídrica e incendios forestales en el territorio.</p>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(2,1fr); gap:8px; flex:1; margin-top:18px;">
+      <div class="frame" style="border-radius:8px;"><img class="ph" data-img="atardecerHumo" alt="Emisiones industriales"></div>
+      <div class="frame" style="border-radius:8px;"><img class="ph" data-img="basuralAgua" alt="Contaminación hídrica"></div>
+      <div class="frame" style="border-radius:8px; grid-row:1/3;"><img class="ph" data-img="incendio" alt="Incendio forestal"></div>
+      <div class="frame" style="border-radius:8px;"><img class="ph" data-img="mineria" alt="Minería a cielo abierto"></div>
+      <div class="frame" style="border-radius:8px;"><img class="ph" data-img="tala" alt="Deforestación"></div>
+      <div class="frame" style="border-radius:8px;"><img class="ph" data-img="quebradaContam" alt="Quebrada contaminada"></div>
+      <div class="frame" style="border-radius:8px;"><img class="ph" data-img="recicladorAves" alt="Manejo de residuos sólidos"></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>08</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 9 — OBJETIVOS ESPECIFICOS -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">¿Para qué se quiere hacer?</span>
+    <h2 class="h-display hv-text" style="font-size:44px; margin-top:10px;">Objetivos específicos</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(3,1fr); gap:2px; margin-top:16px; flex:1; background:var(--line); border-radius:14px; overflow:hidden;">
+      <div style="display:flex; gap:20px; padding:0 32px; align-items:center; background:#fff;"><span class="big-num hv-num" style="font-size:52px; color:var(--gold-500); flex-shrink:0;">1</span><p style="font-size:17px; line-height:1.5; color:var(--ink);">Formar, educar y promover la cultura ambiental en cada una de las <b>9 subregiones</b> de Antioquia.</p></div>
+      <div style="display:flex; gap:20px; padding:0 32px; align-items:center; background:#fff;"><span class="big-num hv-num" style="font-size:52px; color:var(--gold-500); flex-shrink:0;">2</span><p style="font-size:17px; line-height:1.5; color:var(--ink);">Investigar de forma participativa con los pobladores las problemáticas ambientales y sus soluciones.</p></div>
+      <div style="display:flex; gap:20px; padding:0 32px; align-items:center; background:#fff;"><span class="big-num hv-num" style="font-size:52px; color:var(--gold-500); flex-shrink:0;">3</span><p style="font-size:17px; line-height:1.5; color:var(--ink);">Fortalecer la organización de los pobladores en torno a la mesa ambiental.</p></div>
+      <div style="display:flex; gap:20px; padding:0 32px; align-items:center; background:#fff;"><span class="big-num hv-num" style="font-size:52px; color:var(--gold-500); flex-shrink:0;">4</span><p style="font-size:17px; line-height:1.5; color:var(--ink);">Recuperar la memoria y espiritualidad colectiva en torno a los compromisos con el medio ambiente y la participación urbana y rural.</p></div>
+      <div style="display:flex; gap:20px; padding:0 32px; align-items:center; background:#fff;"><span class="big-num hv-num" style="font-size:52px; color:var(--gold-500); flex-shrink:0;">5</span><p style="font-size:17px; line-height:1.5; color:var(--ink);">Desarrollar en los participantes la comprensión de las problemáticas ambientales y la forma de superarlas.</p></div>
+      <div style="display:flex; gap:20px; padding:0 32px; align-items:center; background:#fff;"><span class="big-num hv-num" style="font-size:52px; color:var(--gold-500); flex-shrink:0;">6</span><p style="font-size:17px; line-height:1.5; color:var(--ink);">Incorporar en los planes de desarrollo local las soluciones a las problemáticas ambientales y socio-organizativas.</p></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>09</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10 — PROPUESTA METODOLOGICA -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--forest-900);">
+  <div class="brand-tag" style="color:var(--sand-100); opacity:.5;">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker" style="color:var(--gold-300);">Cómo se hace</span>
+    <h2 class="serif hv-text" style="font-size:42px; color:#fff; font-weight:700; margin-top:10px; line-height:1;">Propuesta metodológica y operativa</h2>
+    <div class="rule on-color"></div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-top:14px; flex:1;">
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:30px 26px; display:flex; flex-direction:column; justify-content:center;">
+        <img class="ph card-bg" data-img="ninosCirculoManos" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.9) 6%, rgba(10,36,24,.62) 55%, rgba(10,36,24,.4) 100%);"></div>
+        <div class="card-content">
+        <p class="serif" style="font-weight:700; color:var(--gold-300); font-size:20px;">Un concurso integrador</p>
+        <p style="font-size:13.5px; color:rgba(255,255,255,.78); line-height:1.65; margin-top:12px;">Premia a personas —niños, jóvenes, adultos, adultos mayores— y organizaciones sociales con productos, procesos o servicios de alto ingrediente de innovación y creatividad ambiental.</p>
+      
+        </div>
+      </div>
+      <div class="frame" style="height:100%;">
+        <img class="ph" data-img="llantasColores" alt="Reciclaje creativo con llantas">
+      </div>
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:30px 26px; display:flex; flex-direction:column; justify-content:center;">
+        <img class="ph card-bg" data-img="cartonMesa" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.9) 6%, rgba(10,36,24,.62) 55%, rgba(10,36,24,.4) 100%);"></div>
+        <div class="card-content">
+        <p class="serif" style="font-weight:700; color:var(--gold-300); font-size:20px;">Materiales reciclables</p>
+        <p style="font-size:13.5px; color:rgba(255,255,255,.78); line-height:1.65; margin-top:12px;">Se invita a elaborar productos tangibles, dibujos y cuentos enfocados al cuidado del agua y buen manejo de residuos sólidos del territorio.</p>
+      
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:20px; margin-top:22px; align-items:center;">
+      <div class="frame" style="height:150px;"><img class="ph" data-img="cartonMesa" alt="Producto elaborado con material reciclado"></div>
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--gold-400); border-radius:var(--radius-md); padding:24px 28px;">
+        <img class="ph card-bg on-light" data-img="manosCirculoTela" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(232,185,63,.95) 10%, rgba(232,185,63,.84) 60%, rgba(232,185,63,.68) 100%);"></div>
+        <div class="card-content">
+        <p style="color:var(--forest-950); font-size:15px; font-weight:600; line-height:1.65;">Articula los tres sectores —<b>social, económico y ambiental</b>— para contribuir a un desarrollo sostenible real y medible.</p>
+      
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num" style="color:var(--sand-100); opacity:.6;"><b style="color:var(--gold-300); opacity:1;">10</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11 — POBLACION OBJETIVO -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Cobertura poblacional</span>
+    <h2 class="h-display hv-text" style="font-size:46px; margin-top:10px;">¿A quiénes va dirigido?</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:2px; flex:1; align-items:stretch; margin-top:10px; border-radius:16px; overflow:hidden;">
+      <div class="hv-tile" style="position:relative; overflow:hidden; background:var(--forest-600); padding:24px 18px; display:flex; flex-direction:column; justify-content:flex-end; color:#fff;">
+        <img class="ph card-bg" data-img="ninosAula" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(21,82,52,.94) 12%, rgba(21,82,52,.7) 55%, rgba(21,82,52,.4) 100%);"></div>
+        <div class="card-content" style="justify-content:flex-end;">
+          <p style="font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; opacity:.75;">Infantil</p>
+          <p class="serif" style="font-size:23px; font-weight:700; margin-top:8px; line-height:1.15;">4–8 y 9–13 años</p>
+        </div>
+      </div>
+      <div class="hv-tile" style="position:relative; overflow:hidden; background:var(--gold-500); padding:24px 18px; display:flex; flex-direction:column; justify-content:flex-end; color:var(--forest-950);">
+        <img class="ph card-bg on-light" data-img="jovenesReciclaje" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(217,165,42,.95) 12%, rgba(217,165,42,.75) 55%, rgba(217,165,42,.5) 100%);"></div>
+        <div class="card-content" style="justify-content:flex-end;">
+          <p style="font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; opacity:.7;">Juvenil</p>
+          <p class="serif" style="font-size:23px; font-weight:700; margin-top:8px; line-height:1.15;">14–28 años</p>
+        </div>
+      </div>
+      <div class="hv-tile" style="position:relative; overflow:hidden; background:var(--forest-800); padding:24px 18px; display:flex; flex-direction:column; justify-content:flex-end; color:#fff;">
+        <img class="ph card-bg" data-img="equipoOficina" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(15,56,38,.94) 12%, rgba(15,56,38,.7) 55%, rgba(15,56,38,.4) 100%);"></div>
+        <div class="card-content" style="justify-content:flex-end;">
+          <p style="font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; opacity:.75;">Adultos</p>
+          <p class="serif" style="font-size:23px; font-weight:700; margin-top:8px; line-height:1.15;">29–60 años</p>
+        </div>
+      </div>
+      <div class="hv-tile" style="position:relative; overflow:hidden; background:var(--sky-500); padding:24px 18px; display:flex; flex-direction:column; justify-content:flex-end; color:#fff;">
+        <img class="ph card-bg" data-img="adultoMayor" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(15,84,101,.94) 12%, rgba(15,84,101,.7) 55%, rgba(15,84,101,.4) 100%);"></div>
+        <div class="card-content" style="justify-content:flex-end;">
+          <p style="font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; opacity:.8;">Adulto mayor</p>
+          <p class="serif" style="font-size:20px; font-weight:700; margin-top:8px; line-height:1.15;">61 años en adelante</p>
+        </div>
+      </div>
+      <div class="hv-tile" style="position:relative; overflow:hidden; background:var(--clay-500); padding:24px 18px; display:flex; flex-direction:column; justify-content:flex-end; color:#fff;">
+        <img class="ph card-bg" data-img="mesaTrabajo" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(160,66,32,.94) 12%, rgba(160,66,32,.7) 55%, rgba(160,66,32,.4) 100%);"></div>
+        <div class="card-content" style="justify-content:flex-end;">
+          <p style="font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; opacity:.8;">Organizaciones</p>
+          <p class="serif" style="font-size:18px; font-weight:700; margin-top:8px; line-height:1.2;">JAC · JAL · JVC · UPAS</p>
+        </div>
+      </div>
+    </div>
+    <p style="text-align:center; color:var(--ink-soft); font-size:13.5px; margin-top:22px;">Una convocatoria intergeneracional para toda la <b style="color:var(--forest-800);">población antioqueña</b>.</p>
+  </div>
+  <div class="slide-num"><b>11</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12 — ORGANIZACIONES SOCIALES Y COMUNITARIAS -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:var(--forest-950);">
+  <div style="display:grid; grid-template-columns:1fr 1fr; height:100%; min-height:0;">
+    <div class="pad-lg" style="display:flex; flex-direction:column; justify-content:center;">
+      <span class="kicker">JAC · JAL · JVC · UPAS</span>
+      <h2 class="serif hv-text" style="font-size:38px; color:#fff; font-weight:700; margin-top:10px; line-height:1.02;">Organizaciones sociales y comunitarias</h2>
+      <div class="rule on-color"></div>
+      <p style="font-size:14.5px; line-height:1.7; color:rgba(255,255,255,.8);">
+        La convocatoria busca el desarrollo de un producto, servicio o acción que demuestre compromiso con el cuidado del medio ambiente y se destaque por su <b style="color:var(--gold-300);">trabajo en equipo, integración, participación y organización</b>: manejo de residuos sólidos reciclables y orgánicos, cuencas hidrográficas, parques y zonas verdes, calidad del aire y uso racional del agua potable.
+      </p>
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; margin-top:20px; background:rgba(255,255,255,.08); border-left:4px solid var(--gold-400); padding:18px 22px; border-radius:0 12px 12px 0;">
+        <img class="ph card-bg" data-img="huertaComunitaria" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.88) 6%, rgba(10,36,24,.6) 55%, rgba(10,36,24,.38) 100%);"></div>
+        <div class="card-content">
+        <p style="font-size:13.5px; color:#fff; line-height:1.6;">Para las <b>Juntas de Acción Comunal</b>: cuéntennos qué se ha hecho por la comunidad en materia ambiental. <span style="color:var(--gold-300); font-weight:700;">¿Cuál es el compromiso con la comunidad?</span></p>
+      
+        </div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-rows:1fr 1fr; gap:6px; padding:6px; min-height:0; overflow:hidden;">
+      <div class="frame" style="border-radius:12px;"><img class="ph" data-img="jovenesReciclaje" alt="Trabajo comunitario organizado"></div>
+      <div class="frame" style="border-radius:12px;"><img class="ph" data-img="ninosManualidades" alt="Participación infantil comunitaria"></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>12</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 13 — FASES DEL CONCURSO EN ANTIOQUIA -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Cronograma general</span>
+    <h2 class="h-display hv-text" style="font-size:44px; margin-top:10px;">Fases del concurso en Antioquia</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:14px;">
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--forest-800); padding:30px 32px; border-radius:18px;">
+        <img class="ph card-bg" data-img="ninosAula" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.9) 6%, rgba(21,82,52,.62) 55%, rgba(21,82,52,.4) 100%);"></div>
+        <div class="card-content">
+        <div class="pill" style="background:rgba(255,255,255,.16); margin-bottom:14px;">Fecha a convenir</div>
+        <p class="serif" style="font-weight:700; font-size:21px; color:#fff; line-height:1.15;">I Fase — III Concurso de Innovación y Creatividad Ambiental</p>
+        <p style="font-size:13.5px; color:rgba(255,255,255,.75); line-height:1.6; margin-top:12px;">Evento en los <b style="color:var(--gold-300);">125 municipios</b> y en especial Medellín, en sus 16 comunas y 5 corregimientos.</p>
+      
+        </div>
+      </div>
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--forest-700); padding:30px 32px; border-radius:18px;">
+        <img class="ph card-bg" data-img="manosFamilia" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(15,56,38,.94) 10%, rgba(15,56,38,.8) 60%, rgba(15,56,38,.6) 100%);"></div>
+        <div class="card-content">
+        <div class="pill" style="background:rgba(255,255,255,.16); color:#fff; margin-bottom:14px;">Fecha a convenir</div>
+        <p class="serif" style="font-weight:700; font-size:21px; color:#fff; line-height:1.15;">II Fase — Clausura</p>
+        <p style="font-size:13.5px; color:rgba(255,255,255,.8); line-height:1.6; margin-top:12px; font-weight:600;">En la ciudad de la eterna primavera, con artistas nacionales e internacionales.</p>
+
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:14px; margin-top:20px; flex:1; align-items:stretch;">
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--forest-950); border-radius:var(--radius-md); padding:26px 30px; display:flex; flex-direction:column; justify-content:center;">
+        <img class="ph card-bg" data-img="cafetal" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.9) 6%, rgba(10,36,24,.64) 55%, rgba(10,36,24,.42) 100%);"></div>
+        <div class="card-content">
+        <span class="serif" style="font-size:17px; color:var(--gold-300); font-weight:700;">Meta de alcance</span>
+        <p style="color:#fff; font-size:14px; line-height:1.6; margin-top:10px;">Cobertura simultánea en los <b>125 municipios</b> de Antioquia, articulando comunidad, instituciones y sector privado.</p>
+      
+        </div>
+      </div>
+      <div class="frame"><img class="ph" data-img="paisajeCafeteroAlto" alt="Territorio rural de Antioquia"></div>
+      <div class="frame"><img class="ph" data-img="mesaTrabajo" alt="Organización comunitaria"></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>13</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14 — MEDELLIN: CIUDAD DE LA ETERNA PRIMAVERA -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:var(--forest-950);">
+  <div style="display:grid; grid-template-columns:.85fr 1.15fr; height:100%; min-height:0;">
+    <div class="medellin-map-frame" style="position:relative; overflow:hidden; background:var(--sand-50);">
+      <img class="ph" data-img="comunasMedellin" alt="Mapa de comunas de Medellín" style="object-fit:contain; padding:8px;">
+      <div style="position:absolute; top:26px; left:26px; z-index:4;"><span class="pill gold">Capital de Antioquia</span></div>
+    </div>
+    <div class="pad-lg" style="display:flex; flex-direction:column; justify-content:center;">
+      <span class="kicker">Municipio de Medellín</span>
+      <h2 class="serif hv-text" style="font-size:36px; color:#fff; font-weight:700; margin-top:10px; line-height:1.05;">La ciudad de la eterna primavera</h2>
+      <div class="rule on-color"></div>
+      <p style="color:rgba(255,255,255,.78); font-size:13.5px; line-height:1.7;">
+        Ganadora del <b style="color:#fff;">City of the Year</b> (Wall Street Journal &amp; Citi Group), por encima de Tel Aviv y Nueva York, entre más de 200 ciudades del mundo — consolidándose como un <b style="color:var(--gold-300);">centro mundial de innovación</b>.
+      </p>
+      <div style="display:flex; gap:36px; margin-top:24px;">
+        <div>
+          <p class="big-num hv-num" style="color:#fff; font-size:56px;">2.8M</p>
+          <p class="stat-label" style="color:rgba(255,255,255,.6);">2ª ciudad más poblada de Colombia</p>
+        </div>
+        <div>
+          <p class="big-num hv-num" style="color:var(--gold-300); font-size:56px;">200+</p>
+          <p class="stat-label" style="color:rgba(255,255,255,.6);">Ciudades superadas en el concurso</p>
+        </div>
+      </div>
+      <p style="color:rgba(255,255,255,.6); font-size:12px; line-height:1.6; margin-top:20px;">Motor de influencia para las demás ciudades del país y del mundo, gracias a soluciones tecnológicas, culturales y educativas de su población emprendedora.</p>
+    </div>
+  </div>
+  <div class="slide-num"><b>14</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15 — TABLA DE PREMIOS -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Incentivos económicos</span>
+    <h2 class="h-display hv-text" style="font-size:44px; margin-top:10px;">Tabla de premios por fase</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:1fr; gap:26px; margin-top:6px; flex:1; align-content:center;">
+      <div>
+        <p style="font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--gold-500); margin-bottom:8px;">I Fase — cifras en COP</p>
+        <table class="table-modern">
+          <thead><tr><th>Puesto</th><th>J.A.C / Org. sociales</th><th>Niños 4–8</th><th>Niños 9–14</th><th>Jóvenes 15–27</th><th>Adulto 28–60</th><th>Adulto mayor 61+</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>30.000.000</td><td>500.000</td><td>800.000</td><td>1.500.000</td><td>2.000.000</td><td>2.000.000</td></tr>
+            <tr><td>2</td><td>20.000.000</td><td>300.000</td><td>500.000</td><td>1.000.000</td><td>1.500.000</td><td>1.500.000</td></tr>
+            <tr><td>3</td><td>10.000.000</td><td>200.000</td><td>300.000</td><td>700.000</td><td>1.000.000</td><td>1.000.000</td></tr>
+            <tr class="total"><td>Total</td><td>60.000.000</td><td>1.000.000</td><td>1.600.000</td><td>3.200.000</td><td>4.500.000</td><td>4.500.000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <p style="font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--gold-500); margin-bottom:8px;">II Fase — cifras en COP</p>
+        <table class="table-modern">
+          <thead><tr><th>Puesto</th><th>J.A.C / Org. sociales</th><th>Niños 4–8</th><th>Niños 9–14</th><th>Jóvenes 15–27</th><th>Adulto 28–60</th><th>Adulto mayor 61+</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>200.000.000</td><td>5.000.000</td><td>8.000.000</td><td>16.000.000</td><td>20.000.000</td><td>20.000.000</td></tr>
+            <tr><td>2</td><td>100.000.000</td><td>3.000.000</td><td>5.000.000</td><td>12.000.000</td><td>15.000.000</td><td>15.000.000</td></tr>
+            <tr><td>3</td><td>50.000.000</td><td>2.000.000</td><td>3.000.000</td><td>6.000.000</td><td>10.000.000</td><td>10.000.000</td></tr>
+            <tr class="total"><td>Total</td><td>350.000.000</td><td>10.000.000</td><td>16.000.000</td><td>34.000.000</td><td>45.000.000</td><td>45.000.000</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>15</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16 — QUIENES LO VAMOS A HACER (organigrama) -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Estructura organizacional</span>
+    <h2 class="h-display hv-text" style="font-size:44px; margin-top:10px;">¿Quiénes lo vamos a hacer?</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:28px; margin-top:16px; flex:1;">
+      <div style="display:flex; flex-direction:column; justify-content:center; gap:22px;">
+        <div>
+          <p style="font-size:11.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--gold-500); margin-bottom:10px;">Áreas administrativas y técnicas</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <div class="hv area-chip">Financiera</div>
+            <div class="hv area-chip">Gerencia de proyectos</div>
+            <div class="hv area-chip">Sistemas</div>
+            <div class="hv area-chip">Comunicaciones</div>
+            <div class="hv area-chip">Mercadeo y ventas</div>
+            <div class="hv area-chip">Logística</div>
+            <div class="hv area-chip">Relaciones públicas</div>
+            <div class="hv area-chip">Talento humano</div>
+            <div class="hv area-chip">Jurídica</div>
+            <div class="hv area-chip">Cooperación internacional</div>
+            <div class="hv area-chip">Producción</div>
+            <div class="hv area-chip">Responsabilidad social</div>
+          </div>
+          <div class="hv area-chip area-chip-highlight" style="margin-top:8px; text-align:center;">Revisor fiscal</div>
+        </div>
+
+        <div>
+          <p style="font-size:11.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--gold-500); margin-bottom:10px;">Líneas estratégicas ambientales</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; border-radius:10px; overflow:hidden;">
+            <div style="background:var(--forest-800); padding:16px;">
+              <p style="font-size:12px; font-weight:800; color:#fff;">Investigación</p>
+              <p style="font-size:10.5px; color:rgba(255,255,255,.7); margin-top:5px; line-height:1.4;">Director · Soluciones a problemáticas</p>
+            </div>
+            <div style="background:var(--forest-700); padding:16px;">
+              <p style="font-size:12px; font-weight:800; color:#fff;">Innovación</p>
+              <p style="font-size:10.5px; color:rgba(255,255,255,.7); margin-top:5px; line-height:1.4;">Directora · Valor ganado</p>
+            </div>
+            <div style="background:var(--forest-800); padding:16px;">
+              <p style="font-size:12px; font-weight:800; color:#fff;">Creatividad</p>
+              <p style="font-size:10.5px; color:rgba(255,255,255,.7); margin-top:5px; line-height:1.4;">Directora · Participación</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:14px; min-height:0;">
+        <div class="frame" style="flex:1;"><img class="ph" data-img="equipoOficina" alt="Trabajo en equipo interdisciplinario"></div>
+        <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--gold-400); border-radius:var(--radius-md); padding:24px 26px; display:flex; align-items:center;">
+        <img class="ph card-bg on-light" data-img="mesaTrabajo" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(232,185,63,.95) 10%, rgba(232,185,63,.84) 60%, rgba(232,185,63,.68) 100%);"></div>
+        <div class="card-content">
+          <p style="color:var(--forest-950); font-size:14px; font-weight:600; line-height:1.65;">Un equipo articulado en <b>áreas técnicas, administrativas y estratégicas</b>, alineado bajo tres direcciones ambientales.</p>
+        
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>16</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 17 — CRONOGRAMA DE ACTIVIDADES (parte 1) -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--forest-900);">
+  <div class="brand-tag" style="color:var(--sand-100); opacity:.5;">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker" style="color:var(--gold-300);">¿Cuándo se quiere hacer?</span>
+    <h2 class="serif hv-text" style="font-size:42px; color:#fff; font-weight:700; margin-top:10px; line-height:1;">Actividades del proyecto</h2>
+    <div class="rule on-color"></div>
+
+    <div style="display:flex; flex-direction:column; gap:18px; margin-top:10px; flex:1; justify-content:center;">
+      <div style="display:grid; grid-template-columns:190px 1.1fr 1.3fr; padding:0 30px 10px;">
+        <span style="font-size:15px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-300); padding-left:0;">Fecha</span>
+        <span style="font-size:15px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-300);">Fases del concurso</span>
+        <span style="font-size:15px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-300);">Metas</span>
+      </div>
+      <div style="display:grid; grid-template-columns:190px 1.1fr 1.3fr; border-radius:16px; overflow:hidden; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);">
+        <div style="background:var(--gold-500); color:var(--forest-950); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; text-align:center; padding:18px;">A convenir</div>
+        <div style="padding:28px 30px; border-right:1px solid rgba(255,255,255,.1);"><p class="serif" style="font-weight:700; font-size:21px; color:#fff; line-height:1.25;">Lanzamiento oficial del proyecto</p><p style="font-size:14px; color:rgba(255,255,255,.6); margin-top:8px;">Con impacto mundial</p></div>
+        <div style="padding:28px 30px; display:grid; align-content:center; font-size:16px; color:rgba(255,255,255,.82); line-height:1.65;">Se articulará el sector ambiental, social y económico. <b style="color:var(--gold-300);">Aforo: 700 personas.</b></div>
+      </div>
+      <div style="display:grid; grid-template-columns:190px 1.1fr 1.3fr; border-radius:16px; overflow:hidden; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);">
+        <div style="background:var(--gold-500); color:var(--forest-950); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; text-align:center; padding:18px;">A convenir</div>
+        <div style="padding:28px 30px; border-right:1px solid rgba(255,255,255,.1);"><p class="serif" style="font-weight:700; font-size:21px; color:#fff; line-height:1.25;">Tardes recreativas y culturales</p><p style="font-size:14px; color:rgba(255,255,255,.6); margin-top:8px;">Talleres educativos</p></div>
+        <div style="padding:28px 30px; display:grid; align-content:center; font-size:16px; color:rgba(255,255,255,.82); line-height:1.65;">Viajes a cada uno de los <b style="color:var(--gold-300);">125 municipios.</b> Motivar la participación al III Concurso.</div>
+      </div>
+      <div style="display:grid; grid-template-columns:190px 1.1fr 1.3fr; border-radius:16px; overflow:hidden; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);">
+        <div style="background:var(--gold-500); color:var(--forest-950); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; text-align:center; padding:18px;">A convenir</div>
+        <div style="padding:28px 30px; border-right:1px solid rgba(255,255,255,.1);"><p class="serif" style="font-weight:700; font-size:21px; color:#fff; line-height:1.25;">Capacitaciones</p><p style="font-size:14px; color:rgba(255,255,255,.6); margin-top:8px;">Direccionamiento logístico</p></div>
+        <div style="padding:28px 30px; display:grid; align-content:center; font-size:16px; color:rgba(255,255,255,.82); line-height:1.65;">Puntos estratégicos en las <b style="color:var(--gold-300);">9 subregiones</b> de nuestro departamento.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num" style="color:var(--sand-100); opacity:.6;"><b style="color:var(--gold-300); opacity:1;">17</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18 — CRONOGRAMA DE ACTIVIDADES (parte 2: fases concurso) -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:linear-gradient(160deg, var(--forest-900), var(--forest-700));">
+  <div class="eco-texture"></div>
+  <div class="pad-lg" style="position:relative; z-index:2; height:100%; display:flex; flex-direction:column; justify-content:center;">
+    <span class="kicker">Continuación del cronograma</span>
+    <h2 class="serif hv-text" style="color:#fff; font-size:40px; font-weight:700; margin-top:10px; line-height:1;">Fases del concurso y clausura</h2>
+    <div class="rule on-color"></div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:10px;">
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:var(--radius-lg); padding:32px; backdrop-filter:blur(6px);">
+        <img class="ph card-bg" data-img="educInfantilGlobo" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.88) 10%, rgba(10,36,24,.72) 60%, rgba(10,36,24,.52) 100%);"></div>
+        <div class="card-content">
+        <p class="big-num hv-num" style="color:var(--gold-300); font-size:50px;">5.000–10.000</p>
+        <p class="stat-label" style="color:rgba(255,255,255,.6);">Personas por territorio, de forma simultánea</p>
+        <p style="color:rgba(255,255,255,.85); font-size:13px; margin-top:16px; line-height:1.6;"><b style="color:#fff;">I Fase</b> — Evento al aire libre en el parque principal de cada municipio, las 16 comunas y corregimientos de Medellín.</p>
+      
+        </div>
+      </div>
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:var(--radius-lg); padding:32px; backdrop-filter:blur(6px);">
+        <img class="ph card-bg" data-img="manosUnidas" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(10,36,24,.88) 10%, rgba(10,36,24,.72) 60%, rgba(10,36,24,.52) 100%);"></div>
+        <div class="card-content">
+        <p class="big-num hv-num" style="color:var(--gold-300); font-size:50px;">2.000.000</p>
+        <p class="stat-label" style="color:rgba(255,255,255,.6);">Personas flotantes aproximadas — Plaza Mayor</p>
+        <p style="color:rgba(255,255,255,.85); font-size:13px; margin-top:16px; line-height:1.6;"><b style="color:#fff;">Clausura · II Fase Final</b> — Macroevento donde compiten los ganadores de todos los municipios.</p>
+      
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>18</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19 — DESFILE HUELLA AMBIENTAL -->
+<!-- ============================================================ -->
+<section class="slide">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; height:100%; min-height:0;">
+    <div class="pad-lg" style="display:flex; flex-direction:column; justify-content:center;">
+      <span class="kicker">Evento insignia</span>
+      <h2 class="h-display hv-text" style="font-size:40px; margin-top:10px; line-height:1;">El desfile "Huella Ambiental"</h2>
+      <div class="rule"></div>
+      <p class="lede" style="font-size:13.5px; line-height:1.65;">
+        Se realizará en cada uno de los <b style="color:var(--forest-800);">125 municipios</b>, incluyendo las comunas y corregimientos de Medellín, de forma simultánea. Veredas, barrios y comunas participan con carrozas decorativas elaboradas con material reciclable, acompañadas de bandas musicales, danzas folclóricas y teatro.
+      </p>
+      <div class="hv hv-glow" style="overflow:hidden; position:relative; margin-top:18px; background:var(--forest-800); border-radius:14px; padding:18px 22px;">
+        <img class="ph card-bg" data-img="llantasColores" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(21,82,52,.9) 6%, rgba(21,82,52,.64) 55%, rgba(21,82,52,.42) 100%);"></div>
+        <div class="card-content">
+        <p style="font-size:13px; color:#fff; line-height:1.55;">Se pretende <b style="color:var(--gold-300);">institucionalizar</b> este evento como espacio de sana convivencia — un ejemplo para el país y el mundo.</p>
+      
+        </div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-rows:1fr 1fr; gap:6px; padding:6px; min-height:0; overflow:hidden;">
+      <div class="frame" style="border-radius:12px;"><img class="ph" data-img="desfileJerico" alt="Desfile Huella Ambiental en Jericó, Antioquia"></div>
+      <div class="frame" style="border-radius:12px;"><img class="ph" data-img="desfileMedellin" alt="Desfile Huella Ambiental con carroza decorativa en Medellín"></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>19</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20 — SOCIALIZACION DE PRODUCTOS Y LOGROS -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Cierre operativo · Fecha a convenir</span>
+    <h2 class="h-display hv-text" style="font-size:42px; margin-top:10px;">Socialización de productos y logros</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:36px; margin-top:6px; align-items:center; flex:1;">
+      <div>
+        <div class="num-block" style="margin-bottom:20px;">
+          <span class="n" style="font-size:96px; color:var(--forest-800);">21</span>
+          <p class="t" style="color:var(--ink-soft); max-width:280px;">mesas ambientales de la ciudad participan con 5 miembros cada una.</p>
+        </div>
+        <p style="font-size:14.5px; color:var(--ink-soft); line-height:1.65;">Participación del sector social con <b style="color:var(--forest-800);">3 miembros por cada comuna y corregimiento</b>. Entrega oficial de reconocimientos de <b>RSE</b> al sector económico, e incentivos al sector social y ambiental por su esfuerzo.</p>
+        <div class="pill" style="background:var(--forest-800); margin-top:20px;">Aforo · 700 personas</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="frame" style="height:230px;"><img class="ph" data-img="ciudadBurbuja" alt="Sostenibilidad urbana"></div>
+        <div class="frame" style="height:130px;"><img class="ph" data-img="manosAtardecer" alt="Comunidad unida"></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>20</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 21 — DESTINO DEL PREMIO Y BENEFICIOS -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:var(--forest-800);">
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Sostenibilidad del incentivo</span>
+    <h2 class="serif hv-text" style="font-size:38px; color:#fff; font-weight:700; margin-top:10px; line-height:1.05;">El premio, reinvertido en continuidad</h2>
+    <p style="font-size:14.5px; max-width:920px; line-height:1.7; color:rgba(255,255,255,.8); margin-top:14px;">
+      El premio entregado a la J.A.C. y/o organizaciones sociales deberá ser invertido en la continuidad de la innovación y creatividad ambiental — sumando puntaje para el próximo evento.
+    </p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; margin-top:26px; flex:1; align-content:center; border-radius:16px; overflow:hidden;">
+      <div style="background:rgba(255,255,255,.06); padding:30px; text-align:center;">
+        <span class="serif" style="color:var(--gold-300); font-weight:700; font-size:30px;">↻</span>
+        <p style="font-weight:800; font-size:16px; color:#fff; margin-top:10px;">Continuidad</p>
+        <p style="font-size:12.5px; color:rgba(255,255,255,.7); margin-top:8px; line-height:1.55;">Sigue el proceso de motivación a cuidar el planeta — puntaje para el próximo evento.</p>
+      </div>
+      <div style="background:rgba(255,255,255,.06); padding:30px; text-align:center;">
+        <span class="serif" style="color:var(--gold-300); font-weight:700; font-size:30px;">✦</span>
+        <p style="font-weight:800; font-size:16px; color:#fff; margin-top:10px;">Genera empleo</p>
+        <p style="font-size:12.5px; color:rgba(255,255,255,.7); margin-top:8px; line-height:1.55;">Vinculación de jóvenes de pregrado y bachilleres en servicio comunitario.</p>
+      </div>
+      <div style="background:rgba(255,255,255,.06); padding:30px; text-align:center;">
+        <span class="serif" style="color:var(--gold-300); font-weight:700; font-size:30px;">＋</span>
+        <p style="font-weight:800; font-size:16px; color:#fff; margin-top:10px;">Mejora calidad de vida</p>
+        <p style="font-size:12.5px; color:rgba(255,255,255,.7); margin-top:8px; line-height:1.55;">Oportunidades de negocio: creación de MyPymes, Pymes y fortalecimiento empresarial.</p>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:8px;">
+      <div class="frame" style="height:110px;"><img class="ph pos-center-low" data-img="sostenibilidadGrid" alt="Sostenibilidad ambiental"></div>
+      <div class="frame" style="height:110px;"><img class="ph" data-img="equipoOficina" alt="Generación de empleo juvenil"></div>
+      <div class="frame" style="height:110px;"><img class="ph" data-img="manosUnidas" alt="Trabajo en red"></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>21</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 22 — REDES Y POLITICAS AMBIENTALES -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--sand-50);">
+  <div class="brand-tag">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker">Fortalecimiento institucional</span>
+    <h2 class="h-display hv-text" style="font-size:38px; margin-top:10px;">Redes y políticas ambientales territoriales</h2>
+    <div class="rule"></div>
+
+    <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:24px; margin-top:16px; flex:1; min-height:0;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; align-content:center;">
+        <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--forest-800); padding:22px 24px; border-radius:14px;">
+        <img class="ph card-bg" data-img="huertaComunitaria" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(21,82,52,.9) 6%, rgba(21,82,52,.66) 55%, rgba(21,82,52,.44) 100%);"></div>
+        <div class="card-content">
+          <p style="font-weight:800; font-size:14px; color:#fff;">Redes de organizaciones ambientales</p>
+          <p style="font-size:12px; color:rgba(255,255,255,.7); margin-top:8px; line-height:1.5;">De cada subregión y a nivel departamental.</p>
+        
+        </div>
+      </div>
+        <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--gold-500); padding:22px 24px; border-radius:14px;">
+        <img class="ph card-bg on-light" data-img="fincaLadera" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(217,165,42,.96) 10%, rgba(217,165,42,.86) 60%, rgba(217,165,42,.7) 100%);"></div>
+        <div class="card-content">
+          <p style="font-weight:800; font-size:14px; color:var(--forest-950);">Fortalecimiento territorial</p>
+          <p style="font-size:12px; color:var(--forest-900); margin-top:8px; line-height:1.5; font-weight:600;">En cada una de las 9 subregiones de Antioquia.</p>
+        
+        </div>
+      </div>
+        <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--sky-500); padding:22px 24px; border-radius:14px;">
+        <img class="ph card-bg" data-img="ninosManualidades" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(23,125,147,.9) 6%, rgba(23,125,147,.66) 55%, rgba(23,125,147,.44) 100%);"></div>
+        <div class="card-content">
+          <p style="font-weight:800; font-size:14px; color:#fff;">Comités barriales y mesas ambientales</p>
+          <p style="font-size:12px; color:rgba(255,255,255,.85); margin-top:8px; line-height:1.5;">Creación donde haya ausencia.</p>
+        
+        </div>
+      </div>
+        <div class="hv hv-glow" style="overflow:hidden; position:relative; background:var(--clay-500); padding:22px 24px; border-radius:14px;">
+        <img class="ph card-bg" data-img="manosCieloAlto" alt="">
+        <div class="card-veil" style="background:linear-gradient(0deg, rgba(192,74,40,.9) 6%, rgba(192,74,40,.66) 55%, rgba(192,74,40,.44) 100%);"></div>
+        <div class="card-content">
+          <p style="font-weight:800; font-size:14px; color:#fff;">Formulación participativa de políticas</p>
+          <p style="font-size:12px; color:rgba(255,255,255,.85); margin-top:8px; line-height:1.5;">Conservación y mitigación de efectos negativos.</p>
+        
+        </div>
+      </div>
+      </div>
+      <div style="display:grid; grid-template-rows:1fr 1fr; gap:10px; min-height:0; overflow:hidden;">
+        <div class="frame"><img class="ph" data-img="paisajeCafeteroAlto" alt="Territorio agrícola de Antioquia"></div>
+        <div class="frame"><img class="ph" data-img="jovenesReciclaje" alt="Participación comunitaria organizada"></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>22</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 23 — SUBREGIONES Y POBLACION -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:var(--forest-950);">
+  <div class="pad-lg" style="height:100%; display:flex; flex-direction:column;">
+    <span class="kicker">Alcance demográfico</span>
+    <h2 class="serif hv-text" style="color:#fff; font-size:40px; font-weight:700; margin-top:10px; line-height:1;">Población por subregión</h2>
+    <div class="rule on-color"></div>
+
+    <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:32px; flex:1; margin-top:10px;">
+      <table class="table-modern" style="align-self:start;">
+        <thead><tr><th>Subregión</th><th style="text-align:right;">Habitantes aprox.</th></tr></thead>
+        <tbody style="color:var(--ink);">
+          <tr><td>Bajo Cauca</td><td style="text-align:right;">268.459</td></tr>
+          <tr><td>Magdalena Medio</td><td style="text-align:right;">111.247</td></tr>
+          <tr><td>Nordeste</td><td style="text-align:right;">210.077</td></tr>
+          <tr><td>Norte</td><td style="text-align:right;">258.339</td></tr>
+          <tr><td>Occidente</td><td style="text-align:right;">222.192</td></tr>
+          <tr><td>Oriente</td><td style="text-align:right;">722.469</td></tr>
+          <tr><td>Suroeste</td><td style="text-align:right;">387.888</td></tr>
+          <tr><td>Urabá</td><td style="text-align:right;">543.054</td></tr>
+          <tr><td>Valle de Aburrá</td><td style="text-align:right;">4.179.996</td></tr>
+          <tr class="total"><td>Total</td><td style="text-align:right;">6.903.721</td></tr>
+        </tbody>
+      </table>
+
+      <div style="display:flex; flex-direction:column; gap:14px; justify-content:center;">
+        <div class="hv hv-glow" style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px 24px; display:flex; align-items:baseline; gap:16px;">
+          <span class="big-num hv-num" style="color:var(--gold-300); font-size:48px;">60%</span>
+          <p class="stat-label" style="color:rgba(255,255,255,.65); margin-top:0;">Beneficiados directos · 4.142.233 personas</p>
+        </div>
+        <div class="hv hv-glow" style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px 24px; display:flex; align-items:baseline; gap:16px;">
+          <span class="big-num hv-num" style="color:#fff; font-size:48px;">30%</span>
+          <p class="stat-label" style="color:rgba(255,255,255,.65); margin-top:0;">Beneficiados indirectos · 2.071.116 personas</p>
+        </div>
+        <div class="hv hv-glow" style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); border-radius:16px; padding:20px 24px; display:flex; align-items:baseline; gap:16px;">
+          <span class="big-num hv-num" style="color:rgba(255,255,255,.85); font-size:48px;">10%</span>
+          <p class="stat-label" style="color:rgba(255,255,255,.65); margin-top:0;">Enterados · 690.372 personas + medios nacionales e internacionales</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num"><b>23</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 24 — PROYECTO TRANSVERSAL -->
+<!-- ============================================================ -->
+<section class="slide" style="background:var(--forest-900);">
+  <div class="brand-tag" style="color:var(--sand-100); opacity:.5;">Piloto Ambiental Antioquia</div>
+  <div class="pad-lg" style="display:flex; flex-direction:column; height:100%;">
+    <span class="kicker" style="color:var(--gold-300);">Articulación de política pública</span>
+    <h2 class="serif hv-text" style="font-size:40px; color:#fff; font-weight:700; margin-top:10px; line-height:1;">Un proyecto transversal</h2>
+    <p style="font-size:14.5px; max-width:900px; color:rgba(255,255,255,.75); margin-top:12px;">Se puede articular con planes, programas y secretarías nacionales, departamentales y municipales.</p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-top:22px; flex:1;">
+      <div style="display:flex; flex-direction:column; gap:14px; justify-content:center;">
+        <div class="hv hv-glow" style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); padding:22px 26px; border-radius:14px;">
+          <p style="font-size:15px; font-weight:700; color:var(--gold-300); line-height:1.5;">Ministerio de Ambiente – SINA – Ministerio de Agricultura – POT</p>
+        </div>
+        <div class="hv hv-glow" style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); padding:22px 26px; border-radius:14px;">
+          <p style="font-size:15px; font-weight:700; color:var(--gold-300); line-height:1.5;">PRAES – PROCEDAS – SIGAM – Paz y Posconflicto</p>
+        </div>
+        <div class="hv hv-glow" style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); padding:22px 26px; border-radius:14px;">
+          <p style="font-size:15px; font-weight:700; color:var(--gold-300); line-height:1.5;">Planes de Desarrollo Municipales y Departamental</p>
+          <p style="font-size:12.5px; color:rgba(255,255,255,.65); margin-top:8px; line-height:1.55;">Programa: Educación y Cultura para la Sostenibilidad Ambiental · Ordenanza Basura Cero</p>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center;">
+        <table class="table-modern" style="font-size:13.5px;">
+          <thead><tr><th>Secretarías Departamento</th><th>Secretarías Medellín</th></tr></thead>
+          <tbody>
+            <tr><td>Medio Ambiente</td><td>Medio Ambiente</td></tr>
+            <tr><td>Competitividad y Productividad</td><td>Desarrollo Económico</td></tr>
+            <tr><td>Mujer</td><td>Mujeres</td></tr>
+            <tr><td>Participación Ciudadana</td><td>Participación Ciudadana</td></tr>
+            <tr><td>Salud</td><td>Salud</td></tr>
+            <tr><td>Educación</td><td>Educación</td></tr>
+            <tr><td>Agricultura</td><td>Control y Gestión Territorial / Cultura ciudadana</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num" style="color:var(--sand-100); opacity:.6;"><b style="color:var(--gold-300); opacity:1;">24</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 25 — MENSAJE INSPIRADOR (testimonio) -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:linear-gradient(135deg, var(--forest-950), var(--forest-800));">
+  <div class="eco-texture"></div>
+  <div class="pad-lg" style="position:relative; z-index:2; display:grid; grid-template-columns:.78fr 1.22fr; gap:54px; align-items:center; height:100%;">
+    <div class="frame" style="height:84%; align-self:center;"><img class="ph" data-img="planetaManos" alt="Compromiso con el planeta"></div>
+    <div>
+      <span class="serif" style="font-size:80px; color:var(--gold-400); line-height:.4; display:block; margin-bottom:16px;">&ldquo;</span>
+      <p class="serif" style="font-size:26px; color:#fff; font-weight:500; line-height:1.42; font-style:italic; text-wrap:balance;">
+        Soy una líder emprendedora anhelando cambiar el mundo para un mejor mañana. A nuestros hijos y las próximas generaciones les brindaremos mejor calidad de vida, enseñándoles a amar todo lo que nos rodea y a valorar el campo y a nuestros campesinos.
+      </p>
+      <div class="rule on-color"></div>
+      <p style="color:var(--gold-300); font-size:18px; font-weight:800;">¡Unidos sí podemos!</p>
+      <p style="color:rgba(255,255,255,.7); font-size:13px; margin-top:16px; line-height:1.6; max-width:540px;">Lo que me ha inspirado a innovar este reto es el gran amor que tengo por el servicio a la comunidad y a nuestro planeta. Ya es el momento de recompensar sus años de esfuerzo.</p>
+    </div>
+  </div>
+  <div class="slide-num"><b>25</b> / 26</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 26 — CIERRE / IMPACTO MUNDIAL -->
+<!-- ============================================================ -->
+<section class="slide dark on-color" style="background:var(--forest-950);">
+  <div style="position:absolute; inset:0;">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; height:100%; opacity:.5;">
+      <div class="frame" style="border-radius:0;"><img class="ph" data-img="paisajePintura" alt="Paisaje natural de Antioquia"></div>
+      <div class="frame" style="border-radius:0;"><img class="ph" data-img="paisajeCafeteroAlto" alt="Territorio rural"></div>
+      <div class="frame" style="border-radius:0;"><img class="ph" data-img="planetaFantasia" alt="Visión de futuro sostenible"></div>
+    </div>
+    <div style="position:absolute; inset:0; background:linear-gradient(0deg, var(--forest-950) 12%, rgba(12,38,28,.6) 60%, rgba(12,38,28,.28));"></div>
+  </div>
+
+  <div class="pad-lg" style="position:relative; z-index:2; height:100%; display:flex; flex-direction:column; justify-content:flex-end;">
+    <span class="kicker">Impacto mundial</span>
+    <h2 class="serif hv-text" style="color:#fff; font-size:48px; font-weight:700; line-height:1.05; margin-top:12px; max-width:860px; text-wrap:balance;">
+      Un trabajo en equipo, articulado con sueños y esperanzas.
+    </h2>
+    <p style="color:rgba(255,255,255,.82); font-size:15px; line-height:1.7; max-width:760px; margin-top:16px;">
+      Si unimos nuestras fortalezas sin importar el color político, credo, etnia, raza y costumbres, generamos <b style="color:var(--gold-300);">paz, armonía y felicidad</b> — trayendo como resultado un ejemplo para la humanidad.
+    </p>
+
+    <div style="display:flex; align-items:center; gap:24px; margin-top:36px;">
+      <div style="height:1px; flex:1; background:rgba(255,255,255,.25);"></div>
+      <p class="serif" style="color:#fff; font-size:28px; font-weight:700; white-space:nowrap;">¡Muchas gracias por su valioso aporte!</p>
+      <div style="height:1px; flex:1; background:rgba(255,255,255,.25);"></div>
+    </div>
+  </div>
+  <div class="slide-num"><b>26</b> / 26</div>
+</section>
+
+</main>
+
+<script src="images_b64.js"></script>
+<script>
+document.querySelectorAll('img[data-img]').forEach(function(img){
+  var key = img.getAttribute('data-img');
+  if (window.PDFIMG && window.PDFIMG[key]) {
+    img.src = window.PDFIMG[key];
+  }
+});
+
+/* boton de pantalla completa: se oculta solo mientras esta activa */
+(function(){
+  var btn = document.getElementById('fullscreenBtn');
+  if (!btn) return;
+  document.addEventListener('fullscreenchange', function(){
+    var isFs = !!document.fullscreenElement;
+    btn.parentElement.style.display = isFs ? 'none' : 'flex';
+    document.body.classList.toggle('is-fullscreen', isFs);
+  });
+})();
+
+/* navegacion entre slides: botones anterior/siguiente + teclado (flechas, espacio) */
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var prevBtn = document.getElementById('prevBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var counterInput = document.getElementById('navCounterInput');
+  var counterTotal = document.getElementById('navTotal');
+  if (!slides.length || !prevBtn || !nextBtn) return;
+
+  if (counterTotal) counterTotal.textContent = slides.length;
+  if (counterInput) counterInput.max = slides.length;
+
+  function currentIndex(){
+    var mid = window.scrollY + window.innerHeight / 2;
+    var best = 0, bestDist = Infinity;
+    slides.forEach(function(s, i){
+      var rect = s.getBoundingClientRect();
+      var slideMid = rect.top + window.scrollY + rect.height / 2;
+      var dist = Math.abs(slideMid - mid);
+      if (dist < bestDist) { bestDist = dist; best = i; }
+    });
+    return best;
+  }
+
+  function updateUI(){
+    var i = currentIndex();
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i === slides.length - 1;
+    if (counterInput && document.activeElement !== counterInput) {
+      counterInput.value = i + 1;
+    }
+  }
+
+  function easeInOutCubic(t){
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  var animId = null;
+  function animateScrollTo(targetY, duration){
+    if (animId) cancelAnimationFrame(animId);
+    var startY = window.scrollY;
+    var delta = targetY - startY;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var elapsed = ts - startTime;
+      var t = Math.min(1, elapsed / duration);
+      window.scrollTo(0, startY + delta * easeInOutCubic(t));
+      if (t < 1) {
+        animId = requestAnimationFrame(step);
+      } else {
+        animId = null;
+      }
+    }
+    animId = requestAnimationFrame(step);
+  }
+
+  function goTo(i){
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    var rect = slides[i].getBoundingClientRect();
+    var targetY = rect.top + window.scrollY - (window.innerHeight - rect.height) / 2;
+    animateScrollTo(targetY, 650);
+  }
+
+  prevBtn.addEventListener('click', function(){ goTo(currentIndex() - 1); });
+  nextBtn.addEventListener('click', function(){ goTo(currentIndex() + 1); });
+
+  document.addEventListener('keydown', function(e){
+    if (document.activeElement === counterInput) return; // no interceptar mientras se escribe el numero
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault();
+      goTo(currentIndex() + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      goTo(currentIndex() - 1);
+    }
+  });
+
+  if (counterInput) {
+    counterInput.addEventListener('focus', function(){ counterInput.select(); });
+    function jumpToInputValue(){
+      var n = parseInt(counterInput.value, 10);
+      if (!isNaN(n)) goTo(n - 1);
+      else updateUI();
+    }
+    counterInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        jumpToInputValue();
+        counterInput.blur();
+      } else if (e.key === 'Escape') {
+        updateUI();
+        counterInput.blur();
+      }
+    });
+    counterInput.addEventListener('blur', jumpToInputValue);
+  }
+
+  var scrollTimer;
+  window.addEventListener('scroll', function(){
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(updateUI, 80);
+  }, { passive: true });
+
+  updateUI();
+})();
+
+(function(){
+  document.querySelectorAll('.frame').forEach(function(frame){
+    frame.addEventListener('click', function(e){
+      if (frame.classList.contains('frame-map-contained') && frame._justDragged) {
+        frame._justDragged = false;
+        e.stopPropagation();
+        return;
+      }
+      var wasZoomed = frame.classList.contains('zoomed');
+      var rect = frame.getBoundingClientRect();
+      var clickRatioX = (e.clientX - rect.left) / rect.width;
+      var clickRatioY = (e.clientY - rect.top) / rect.height;
+      document.querySelectorAll('.frame.zoomed').forEach(function(f){ f.classList.remove('zoomed'); });
+      if (!wasZoomed) {
+        frame.classList.add('zoomed');
+        if (frame.classList.contains('frame-map-contained')) {
+          requestAnimationFrame(function(){
+            var maxScrollX = frame.scrollWidth - frame.clientWidth;
+            var maxScrollY = frame.scrollHeight - frame.clientHeight;
+            frame.scrollLeft = maxScrollX * clickRatioX;
+            frame.scrollTop = maxScrollY * clickRatioY;
+          });
+        }
+      }
+      e.stopPropagation();
+    });
+  });
+  document.addEventListener('click', function(){
+    document.querySelectorAll('.frame.zoomed').forEach(function(f){ f.classList.remove('zoomed'); });
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.frame.zoomed').forEach(function(f){ f.classList.remove('zoomed'); });
+    }
+  });
+
+  /* arrastre (pan) dentro del mapa ampliado */
+  document.querySelectorAll('.frame-map-contained').forEach(function(frame){
+    var dragging = false, startX, startY, scrollLeft, scrollTop, moved;
+    frame.addEventListener('mousedown', function(e){
+      if (!frame.classList.contains('zoomed')) return;
+      dragging = true; moved = false;
+      startX = e.pageX; startY = e.pageY;
+      scrollLeft = frame.scrollLeft; scrollTop = frame.scrollTop;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e){
+      if (!dragging) return;
+      var dx = e.pageX - startX, dy = e.pageY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      frame.scrollLeft = scrollLeft - dx;
+      frame.scrollTop = scrollTop - dy;
+    });
+    document.addEventListener('mouseup', function(){
+      if (dragging && moved) frame._justDragged = true;
+      dragging = false;
+    });
+  });
+})();
+
+/* mouse-following spotlight glow on hv-glow cards */
+(function(){
+  document.querySelectorAll('.hv-glow').forEach(function(card){
+    card.addEventListener('mousemove', function(e){
+      var rect = card.getBoundingClientRect();
+      var x = ((e.clientX - rect.left) / rect.width) * 100;
+      var y = ((e.clientY - rect.top) / rect.height) * 100;
+      card.style.setProperty('--mx', x + '%');
+      card.style.setProperty('--my', y + '%');
+    });
+  });
+})();
+
+/* brillo dorado que sigue el cursor sobre los titulos (.hv-text) */
+(function(){
+  document.querySelectorAll('.hv-text').forEach(function(title){
+    var glow = document.createElement('span');
+    glow.className = 'hv-text-glow-layer';
+    glow.setAttribute('aria-hidden', 'true');
+    glow.innerHTML = title.innerHTML;
+    title.appendChild(glow);
+
+    title.addEventListener('mouseenter', function(){
+      title.classList.add('hv-text-active');
+    });
+    title.addEventListener('mousemove', function(e){
+      var rect = title.getBoundingClientRect();
+      var x = ((e.clientX - rect.left) / rect.width) * 100;
+      var y = ((e.clientY - rect.top) / rect.height) * 100;
+      glow.style.setProperty('--gx', x + '%');
+      glow.style.setProperty('--gy', y + '%');
+    });
+    title.addEventListener('mouseleave', function(){
+      title.classList.remove('hv-text-active');
+    });
+  });
+})();
+
+/* scroll-reveal: each slide fades/slides into view as it enters the viewport */
+(function(){
+  if (window.matchMedia('print').matches) {
+    document.querySelectorAll('.slide').forEach(function(s){ s.classList.add('in-view'); });
+    return;
+  }
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+
+  document.querySelectorAll('.slide').forEach(function(slide, i){
+    if (i === 0) {
+      slide.classList.add('in-view');
+    } else {
+      observer.observe(slide);
+    }
+  });
+
+  window.addEventListener('beforeprint', function(){
+    document.querySelectorAll('.slide').forEach(function(s){ s.classList.add('in-view'); });
+  });
+})();
+</script>
+</body>
+</html>
