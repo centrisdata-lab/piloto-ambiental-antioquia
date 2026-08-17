@@ -58,7 +58,6 @@ body{
   position:relative;
   width:var(--slide-w);
   height:var(--slide-h);
-  max-width:calc(100vw - 24px);
   aspect-ratio:16/9;
   background:var(--paper);
   overflow:hidden;
@@ -82,8 +81,12 @@ body{
   .slide{ opacity:1; transform:none; transition:none; }
 }
 
+/* responsive: en pantallas angostas (celular/tablet), el slide se escala
+   como una miniatura fiel del diseno de escritorio via CSS zoom, en vez
+   de recalcular cada tamano de fuente/padding individualmente. */
 @media (max-width:1320px){
-  .slide{ width:96vw; height:calc(96vw * 9 / 16); }
+  .deck{ padding:24px 0 64px; gap:24px; }
+  .slide{ zoom: calc((100vw - 24px) / var(--slide-w)); }
 }
 
 /* ============ TYPOGRAPHY ============ */
@@ -217,6 +220,15 @@ body{
   border:1px solid rgba(255,255,255,.18);
   backdrop-filter:blur(10px);
   box-shadow:0 12px 32px -8px rgba(0,0,0,.5);
+}
+@media (max-width:600px){
+  .toolbar{ top:10px; right:10px; gap:6px; }
+  .toolbar button{ font-size:11px; padding:8px 12px; }
+  .nav-bar{ bottom:12px; gap:8px; padding:6px 8px; }
+  .nav-bar button{ font-size:11px; padding:7px 12px; }
+  #navCounterWrap{ font-size:11px; }
+  #navCounterInput{ width:24px; font-size:11px; padding:2px 1px; }
+  #exitFsBtn{ padding-left:8px; }
 }
 .nav-bar button{
   font-family:var(--sans);
