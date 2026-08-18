@@ -888,7 +888,7 @@ body.is-fullscreen #exitFsBtn{ display:inline-block; }
 
   <div style="position:absolute; right:44px; top:12%; height:76%; width:46%; z-index:2; display:flex; align-items:center;">
     <div class="hv-map-frame" style="width:100%; height:100%; position:relative;">
-      <img class="ph" data-img="mapAntioquia" alt="Mapa de las subregiones de Antioquia con iconos ambientales"
+      <img id="mapMorphSource" class="ph" data-img="mapAntioquia" alt="Mapa de las subregiones de Antioquia con iconos ambientales"
            style="object-fit:contain; background:transparent;">
     </div>
   </div>
@@ -899,6 +899,8 @@ body.is-fullscreen #exitFsBtn{ display:inline-block; }
 <!-- SLIDE 2 — LINEAS ESTRATEGICAS -->
 <!-- ============================================================ -->
 <section class="slide" style="background:var(--forest-900);">
+  <img id="mapMorphTarget" class="ph" data-img="mapAntioquia" alt=""
+       style="position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:.09; z-index:0; pointer-events:none; padding:40px;">
   <div class="brand-tag" style="color:var(--sand-100); opacity:.5;">Piloto Ambiental Antioquia</div>
   <div class="pad-lg" style="display:flex; flex-direction:column; height:100%; position:relative; z-index:2;">
     <span class="kicker" style="color:var(--gold-300);">Marco estratégico</span>
@@ -1971,17 +1973,65 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     animateScrollTo(targetY, 650);
   }
 
-  prevBtn.addEventListener('click', function(){ goTo(currentIndex() - 1); });
-  nextBtn.addEventListener('click', function(){ goTo(currentIndex() + 1); });
+  /* efecto morph: el mapa del slide 1 crece hasta convertirse en el fondo del slide 2 */
+  function playMapMorph(){
+    var source = document.getElementById('mapMorphSource');
+    var slide2 = slides[1];
+    if (!source || !slide2) return false;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+
+    var srcRect = source.getBoundingClientRect();
+
+    var clone = source.cloneNode(true);
+    clone.removeAttribute('id');
+    clone.style.position = 'fixed';
+    clone.style.left = srcRect.left + 'px';
+    clone.style.top = srcRect.top + 'px';
+    clone.style.width = srcRect.width + 'px';
+    clone.style.height = srcRect.height + 'px';
+    clone.style.margin = '0';
+    clone.style.zIndex = '9999';
+    clone.style.transition = 'left .75s cubic-bezier(0.65,0,0.35,1), top .75s cubic-bezier(0.65,0,0.35,1), width .75s cubic-bezier(0.65,0,0.35,1), height .75s cubic-bezier(0.65,0,0.35,1), opacity .75s ease';
+    clone.style.pointerEvents = 'none';
+    document.body.appendChild(clone);
+
+    goTo(1);
+
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        var slide2Rect = slide2.getBoundingClientRect();
+        clone.style.left = (slide2Rect.left + 40) + 'px';
+        clone.style.top = (slide2Rect.top + 40) + 'px';
+        clone.style.width = (slide2Rect.width - 80) + 'px';
+        clone.style.height = (slide2Rect.height - 80) + 'px';
+        clone.style.opacity = '.09';
+      });
+    });
+
+    setTimeout(function(){ clone.remove(); }, 900);
+    return true;
+  }
+
+  /* punto de entrada unico de navegacion: usa el morph solo en la transicion 1 -> 2 */
+  function navigateTo(i){
+    var current = currentIndex();
+    if (current === 0 && i === 1) {
+      if (playMapMorph()) return;
+    }
+    goTo(i);
+  }
+
+  prevBtn.addEventListener('click', function(){ navigateTo(currentIndex() - 1); });
+  nextBtn.addEventListener('click', function(){ navigateTo(currentIndex() + 1); });
 
   document.addEventListener('keydown', function(e){
     if (document.activeElement === counterInput) return; // no interceptar mientras se escribe el numero
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
       e.preventDefault();
-      goTo(currentIndex() + 1);
+      navigateTo(currentIndex() + 1);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
       e.preventDefault();
-      goTo(currentIndex() - 1);
+      navigateTo(currentIndex() - 1);
     }
   });
 
@@ -1989,7 +2039,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     counterInput.addEventListener('focus', function(){ counterInput.select(); });
     function jumpToInputValue(){
       var n = parseInt(counterInput.value, 10);
-      if (!isNaN(n)) goTo(n - 1);
+      if (!isNaN(n)) navigateTo(n - 1);
       else updateUI();
     }
     counterInput.addEventListener('keydown', function(e){
