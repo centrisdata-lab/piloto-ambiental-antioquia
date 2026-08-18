@@ -1973,42 +1973,113 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     animateScrollTo(targetY, 650);
   }
 
-  /* efecto morph: el mapa del slide 1 crece hasta convertirse en el fondo del slide 2 */
+  /* efecto morph: el mapa del slide 1 crece con la camara fija hasta llenar toda la
+     pantalla (mientras el resto del slide 1 se desvanece), y solo entonces se salta
+     al slide 2 (ya cubierto por el mapa) y se revela su contenido real por debajo. */
   function playMapMorph(){
     var source = document.getElementById('mapMorphSource');
+    var slide1 = slides[0];
     var slide2 = slides[1];
-    if (!source || !slide2) return false;
+    if (!source || !slide1 || !slide2) return false;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
 
     var srcRect = source.getBoundingClientRect();
+    var startLeft = srcRect.left, startTop = srcRect.top;
+    var startWidth = srcRect.width, startHeight = srcRect.height;
+
+    // overlay negro detras del clon para tapar el resto de la pagina mientras crece
+    var backdrop = document.createElement('div');
+    backdrop.style.position = 'fixed';
+    backdrop.style.inset = '0';
+    backdrop.style.background = 'var(--forest-950, #0a2418)';
+    backdrop.style.opacity = '0';
+    backdrop.style.zIndex = '9998';
+    backdrop.style.pointerEvents = 'none';
+    document.body.appendChild(backdrop);
 
     var clone = source.cloneNode(true);
     clone.removeAttribute('id');
     clone.style.position = 'fixed';
-    clone.style.left = srcRect.left + 'px';
-    clone.style.top = srcRect.top + 'px';
-    clone.style.width = srcRect.width + 'px';
-    clone.style.height = srcRect.height + 'px';
+    clone.style.left = startLeft + 'px';
+    clone.style.top = startTop + 'px';
+    clone.style.width = startWidth + 'px';
+    clone.style.height = startHeight + 'px';
     clone.style.margin = '0';
     clone.style.zIndex = '9999';
-    clone.style.transition = 'left .75s cubic-bezier(0.65,0,0.35,1), top .75s cubic-bezier(0.65,0,0.35,1), width .75s cubic-bezier(0.65,0,0.35,1), height .75s cubic-bezier(0.65,0,0.35,1), opacity .75s ease';
+    clone.style.opacity = '1';
     clone.style.pointerEvents = 'none';
+    clone.style.willChange = 'left, top, width, height';
     document.body.appendChild(clone);
 
-    goTo(1);
+    // resto del contenido del slide 1 se desvanece mientras el mapa crece
+    var slide1Rest = slide1.querySelectorAll(':scope > *:not(#mapMorphSource):not(.hv-map-frame)');
+    slide1.style.transition = 'opacity .4s ease';
 
-    requestAnimationFrame(function(){
-      requestAnimationFrame(function(){
+    var growDuration = 650;
+    var startTime = null;
+    function growStep(ts){
+      if (startTime === null) startTime = ts;
+      var elapsed = ts - startTime;
+      var t = Math.min(1, elapsed / growDuration);
+      var eased = easeInOutCubic(t);
+
+      var vw = window.innerWidth, vh = window.innerHeight;
+      clone.style.left = (startLeft + (0 - startLeft) * eased) + 'px';
+      clone.style.top = (startTop + (0 - startTop) * eased) + 'px';
+      clone.style.width = (startWidth + (vw - startWidth) * eased) + 'px';
+      clone.style.height = (startHeight + (vh - startHeight) * eased) + 'px';
+      backdrop.style.opacity = String(eased * 0.94);
+      slide1.style.opacity = String(1 - eased);
+
+      if (t < 1) {
+        requestAnimationFrame(growStep);
+      } else {
+        finishMorph();
+      }
+    }
+
+    function finishMorph(){
+      // ya tapamos toda la pantalla: saltamos al slide 2 sin que se note (esta cubierto)
+      var rect = slide2.getBoundingClientRect();
+      var targetY = rect.top + window.scrollY - (window.innerHeight - rect.height) / 2;
+      window.scrollTo(0, targetY);
+      slide1.style.opacity = '';
+      slide1.style.transition = '';
+
+      // encoger/desvanecer el clon revelando el slide 2 real por debajo
+      var shrinkDuration = 500;
+      var shrinkStart = null;
+      var fromRect = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+      function shrinkStep(ts){
+        if (shrinkStart === null) shrinkStart = ts;
+        var elapsed = ts - shrinkStart;
+        var t = Math.min(1, elapsed / shrinkDuration);
+        var eased = easeInOutCubic(t);
+
         var slide2Rect = slide2.getBoundingClientRect();
-        clone.style.left = (slide2Rect.left + 40) + 'px';
-        clone.style.top = (slide2Rect.top + 40) + 'px';
-        clone.style.width = (slide2Rect.width - 80) + 'px';
-        clone.style.height = (slide2Rect.height - 80) + 'px';
-        clone.style.opacity = '.09';
-      });
-    });
+        var destLeft = slide2Rect.left + 40;
+        var destTop = slide2Rect.top + 40;
+        var destWidth = slide2Rect.width - 80;
+        var destHeight = slide2Rect.height - 80;
 
-    setTimeout(function(){ clone.remove(); }, 900);
+        clone.style.left = (fromRect.left + (destLeft - fromRect.left) * eased) + 'px';
+        clone.style.top = (fromRect.top + (destTop - fromRect.top) * eased) + 'px';
+        clone.style.width = (fromRect.width + (destWidth - fromRect.width) * eased) + 'px';
+        clone.style.height = (fromRect.height + (destHeight - fromRect.height) * eased) + 'px';
+        clone.style.opacity = String(1 + (0.09 - 1) * eased);
+        backdrop.style.opacity = String(0.94 * (1 - eased));
+
+        if (t < 1) {
+          requestAnimationFrame(shrinkStep);
+        } else {
+          clone.remove();
+          backdrop.remove();
+        }
+      }
+      requestAnimationFrame(shrinkStep);
+    }
+
+    requestAnimationFrame(growStep);
     return true;
   }
 
