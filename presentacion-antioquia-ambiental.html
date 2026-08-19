@@ -2130,9 +2130,25 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
      estatica deslizandose. */
   function getLayers(slideEl){
     var host = slideEl.querySelector(':scope > .pad-lg') || slideEl;
-    var layers = Array.prototype.filter.call(host.children, function(el){
+    var direct = Array.prototype.filter.call(host.children, function(el){
       return el.offsetWidth > 20 && el.offsetHeight > 10; // ignora marcas/decoracion casi invisibles
     });
+    // si hay pocos bloques de primer nivel, se busca un nivel mas profundo
+    // (tarjetas dentro de un grid, celdas, chips...) para tener mas piezas
+    // independientes que muevan -- asi el movimiento se nota en slides con
+    // poco contenido de alto nivel, no solo en los que tienen muchas secciones.
+    var layers = direct.slice();
+    if (direct.length <= 3) {
+      direct.forEach(function(el){
+        var kids = Array.prototype.filter.call(el.children, function(k){
+          return k.offsetWidth > 40 && k.offsetHeight > 24;
+        });
+        if (kids.length >= 2 && kids.length <= 8) {
+          var idx = layers.indexOf(el);
+          layers.splice.apply(layers, [idx, 1].concat(kids));
+        }
+      });
+    }
     return layers.length ? layers : [host];
   }
 
@@ -2328,10 +2344,10 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       var jitter = (Math.random() - 0.5);
       return {
         box: box,
-        dx: nx * (110 + i * 16) + jitter * 40,
-        dy: ny * (90 + i * 12) + jitter * 26,
-        dz: -260 - i * 30 - Math.random() * 80,
-        rot: (jitter) * 50 - (i % 2 === 0 ? 18 : -18),
+        dx: nx * (260 + i * 34) + jitter * 90,
+        dy: ny * (210 + i * 26) + jitter * 60,
+        dz: -520 - i * 50 - Math.random() * 120,
+        rot: (jitter) * 110 - (i % 2 === 0 ? 46 : -46),
         rotAxis: i % 2 === 0 ? 'Y' : 'X',
         delay: i * 35
       };
@@ -2350,23 +2366,23 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     }
     var inMeta = inLayers.map(function(layer, i){
       layer.style.transition = 'none';
-      layer.style.opacity = '0';
+      layer.style.opacity = '1';
       layer.style.transformStyle = 'preserve-3d';
       var dir = (i % 2 === 0) ? 1 : -1;
       var jitter = (Math.random() - 0.5);
       return {
         el: layer,
-        dx: dir * (60 + i * 10) + jitter * 30,
-        dy: (16 + i * 5) * -dir,
-        dz: -420 - i * 20,
-        rot: dir * (34 - i * 2),
+        dx: dir * (220 + i * 30) + jitter * 80,
+        dy: (60 + i * 14) * -dir,
+        dz: -760 - i * 30,
+        rot: dir * (70 - i * 2),
         rotAxis: i % 2 === 0 ? 'Y' : 'X'
       };
     });
     goTo(toIndex);
 
-    var outDuration = 560;
-    var inDuration = 680;
+    var outDuration = 600;
+    var inDuration = 720;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -2377,7 +2393,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         var eased = easeInOutCubic(lt);
         var rotAmt = o.rot * eased;
         o.box.style.transform = 'perspective(1000px) translate3d(' + (o.dx * eased) + 'px,' + (o.dy * eased) + 'px,' + (o.dz * eased) + 'px) rotate' + o.rotAxis + '(' + rotAmt + 'deg) scale(' + (1 - eased * 0.15) + ')';
-        o.box.style.opacity = String(1 - eased * eased);
+        // el desvanecido solo actua en el ultimo tramo, cuando la pieza ya
+        // esta lejos/rotada -- el movimiento es lo que se percibe, no un fade.
+        o.box.style.opacity = lt < 0.62 ? '1' : String(Math.max(0, 1 - (lt - 0.62) / 0.38));
         var blur = Math.sin(lt * Math.PI) * 3.5;
         var glow = lt > 0 && lt < 0.5 ? (1 - Math.abs(lt - 0.25) / 0.25) * 12 : 0;
         o.box.style.filter = 'blur(' + blur.toFixed(1) + 'px) drop-shadow(0 0 ' + glow + 'px rgba(242,205,110,.85))';
@@ -2388,7 +2406,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         var lt = Math.max(0, Math.min(1, (elapsed - delay) / inDuration));
         var eased = easeInOutCubic(lt);
         var inv = 1 - eased;
-        o.el.style.opacity = String(eased);
+        // igual criterio en la entrada: visible casi todo el trayecto,
+        // solo aparece desde opacidad 0 en el arranque muy breve.
+        o.el.style.opacity = lt < 0.12 ? String(lt / 0.12) : '1';
         var rotAmt = o.rot * inv;
         o.el.style.transform = 'perspective(1400px) translate3d(' + (o.dx * inv) + 'px,' + (o.dy * inv) + 'px,' + (o.dz * inv) + 'px) rotate' + o.rotAxis + '(' + rotAmt + 'deg)';
         var blur = Math.sin(lt * Math.PI) * 2.5;
@@ -2463,9 +2483,10 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       strip.style.height = outRect.height + 'px';
       strip.style.transform = 'none';
       strip.style.transition = 'none';
+      stripBox.style.transformStyle = 'preserve-3d';
       stripBox.appendChild(strip);
       root.appendChild(stripBox);
-      stripes.push({ el: stripBox, delay: i * 22, jitter: (Math.random() - 0.5) * 46 });
+      stripes.push({ el: stripBox, delay: i * 22, jitter: (Math.random() - 0.5) * 46, dir: i % 2 === 0 ? 1 : -1 });
     }
     outWrap.style.opacity = '0'; // las franjas reemplazan visualmente al snapshot completo
 
@@ -2513,11 +2534,14 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       grid.style.opacity = String(t < 0.5 ? Math.min(1, t / 0.15) * 0.9 : Math.max(0, 0.9 - (t - 0.5) / 0.5));
 
       stripes.forEach(function(st){
-        var lt = Math.max(0, Math.min(1, (elapsed - st.delay) / 340));
+        var lt = Math.max(0, Math.min(1, (elapsed - st.delay) / 460));
         var e2 = easeInOutCubic(lt);
         var jx = Math.sin(lt * Math.PI) * st.jitter;
-        st.el.style.transform = 'translateX(' + (jx + e2 * (st.jitter > 0 ? 260 : -260)) + 'px)';
-        st.el.style.opacity = String(1 - e2);
+        var travel = st.dir * (520 + Math.abs(st.jitter) * 4);
+        st.el.style.transform = 'perspective(900px) translateX(' + (jx + e2 * travel) + 'px) translateZ(' + (-e2 * 200) + 'px) rotateY(' + (st.dir * e2 * 24) + 'deg)';
+        // el movimiento (translateX/Z grande) es lo que se percibe; la opacidad
+        // solo cae en el ultimo tramo cuando la franja ya salio de cuadro.
+        st.el.style.opacity = lt < 0.7 ? '1' : String(Math.max(0, 1 - (lt - 0.7) / 0.3));
       });
 
       var rect = toSlide ? toSlide.getBoundingClientRect() : toRectCache;
@@ -2639,8 +2663,10 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       var t = Math.min(1, elapsed / duration);
       var eased = easeInOutCubic(t);
 
-      outWrap.style.opacity = String(Math.max(0, 1 - t * 1.3));
-      outWrap.style.transform = 'perspective(1200px) scale(' + (1 - eased * 0.1) + ') translateZ(' + (-eased * 140) + 'px) rotateY(' + (eased * 6) + 'deg)';
+      // el hundimiento (translateZ/rotateX grandes) es lo que se percibe;
+      // la opacidad solo cae en el ultimo tramo cuando ya esta muy lejos.
+      outWrap.style.opacity = t < 0.55 ? '1' : String(Math.max(0, 1 - (t - 0.55) / 0.45));
+      outWrap.style.transform = 'perspective(1200px) scale(' + (1 - eased * 0.42) + ') translateZ(' + (-eased * 620) + 'px) translateY(' + (eased * 70) + 'px) rotateX(' + (eased * 22) + 'deg) rotateY(' + (eased * 14) + 'deg)';
       outWrap.style.filter = 'blur(' + (eased * 5).toFixed(1) + 'px)';
 
       var rect = toSlide ? toSlide.getBoundingClientRect() : outWrap.getBoundingClientRect();
@@ -2674,8 +2700,10 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       calibV.style.opacity = String(calibT);
 
       if (toSlide) {
-        toSlide.style.opacity = String(eased);
-        toSlide.style.transform = 'scale(' + (0.88 + eased * 0.12) + ')';
+        // llega desde muy pequeno/rotado y crece hasta su tamano real;
+        // la opacidad solo se usa en el arranque muy breve (aparicion).
+        toSlide.style.opacity = t < 0.1 ? String(t / 0.1) : '1';
+        toSlide.style.transform = 'perspective(1200px) scale(' + (0.55 + eased * 0.45) + ') translateZ(' + ((1 - eased) * -300) + 'px) rotateX(' + ((1 - eased) * -16) + 'deg)';
         toSlide.style.filter = 'blur(' + ((1 - eased) * 6).toFixed(1) + 'px)';
       }
 
@@ -2743,14 +2771,15 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       vignette.style.opacity = String(t < 0.4 ? t / 0.4 : Math.max(0, 1 - (t - 0.4) / 0.6));
 
       var fallE = easeInOutCubic(Math.min(1, t / 0.85));
-      outWrap.style.transform = 'perspective(1100px) rotateX(' + (-fallE * 55) + 'deg) translateY(' + (fallE * 60) + 'px) translateZ(' + (-fallE * 340) + 'px) scale(' + (1 - fallE * 0.2) + ')';
-      outWrap.style.opacity = String(Math.max(0, 1 - t * 1.5));
+      outWrap.style.transform = 'perspective(1100px) rotateX(' + (-fallE * 78) + 'deg) translateY(' + (fallE * 160) + 'px) translateZ(' + (-fallE * 640) + 'px) scale(' + (1 - fallE * 0.35) + ')';
+      // cae/se hunde en profundidad -- la opacidad solo actua muy al final.
+      outWrap.style.opacity = t < 0.6 ? '1' : String(Math.max(0, 1 - (t - 0.6) / 0.4));
       outWrap.style.filter = 'blur(' + (fallE * 4).toFixed(1) + 'px)';
 
       if (toSlide) {
         var inE = eased;
-        toSlide.style.opacity = String(Math.min(1, t / 0.55));
-        toSlide.style.transform = 'perspective(1200px) translateZ(' + (-520 * (1 - inE)) + 'px) scale(' + (0.7 + inE * 0.3) + ')';
+        toSlide.style.opacity = t < 0.08 ? String(t / 0.08) : '1';
+        toSlide.style.transform = 'perspective(1200px) translateZ(' + (-780 * (1 - inE)) + 'px) scale(' + (0.55 + inE * 0.45) + ')';
         var blurAmt = Math.max(0, (1 - t / 0.6) * 2);
         toSlide.style.filter = 'brightness(' + (1 + (1 - inE) * 0.5) + ') blur(' + blurAmt.toFixed(1) + 'px)';
       }
@@ -2773,33 +2802,210 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     return true;
   }
 
+  /* rotacion de cubo: la pantalla completa gira como una cara de cubo 3D
+     -- el slide saliente rota alejandose sobre su borde derecho mientras
+     el entrante rota entrando desde el borde izquierdo, ambos anclados
+     al mismo eje para que se perciba como una sola pieza rigida girando
+     en el espacio, no dos capas independientes desvaneciendose. */
+  function playCubeRotate(fromSlide, toIndex){
+    var outRect = fromSlide.getBoundingClientRect();
+    var root = document.fullscreenElement || document.body;
+
+    var stage = document.createElement('div');
+    stage.style.position = 'fixed';
+    stage.style.left = outRect.left + 'px';
+    stage.style.top = outRect.top + 'px';
+    stage.style.width = outRect.width + 'px';
+    stage.style.height = outRect.height + 'px';
+    stage.style.zIndex = '9999';
+    stage.style.pointerEvents = 'none';
+    stage.style.perspective = '1800px';
+    root.appendChild(stage);
+
+    var outFace = fromSlide.cloneNode(true);
+    outFace.style.position = 'absolute';
+    outFace.style.inset = '0';
+    outFace.style.width = '100%';
+    outFace.style.height = '100%';
+    outFace.style.transform = 'none';
+    outFace.style.transition = 'none';
+    outFace.style.transformOrigin = 'right center';
+    outFace.style.backfaceVisibility = 'hidden';
+    stage.appendChild(outFace);
+
+    var toSlide = slides[toIndex];
+    var inFace = toSlide ? toSlide.cloneNode(true) : null;
+    if (inFace) {
+      inFace.style.position = 'absolute';
+      inFace.style.inset = '0';
+      inFace.style.width = '100%';
+      inFace.style.height = '100%';
+      inFace.style.transform = 'rotateY(90deg)';
+      inFace.style.transition = 'none';
+      inFace.style.transformOrigin = 'left center';
+      inFace.style.backfaceVisibility = 'hidden';
+      stage.appendChild(inFace);
+    }
+
+    if (toSlide) {
+      toSlide.style.transition = 'none';
+      toSlide.style.opacity = '0';
+    }
+    goTo(toIndex);
+
+    goldFlash(outRect.left + outRect.width, outRect.top + outRect.height / 2, { count: 10, maxDist: 100, duration: 500, rings: false });
+
+    var duration = 760;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var t = Math.min(1, (ts - startTime) / duration);
+      var eased = easeInOutCubic(t);
+
+      var angle = eased * 90;
+      stage.style.transform = 'translateZ(-1px)';
+      outFace.style.transform = 'rotateY(-' + angle + 'deg)';
+      outFace.style.filter = angle > 60 ? 'brightness(' + (1 - (angle - 60) / 30 * 0.5) + ')' : 'none';
+      if (inFace) {
+        inFace.style.transform = 'rotateY(' + (90 - angle) + 'deg)';
+        inFace.style.filter = angle < 45 ? 'brightness(' + (0.5 + angle / 45 * 0.5) + ')' : 'none';
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        stage.remove();
+        if (toSlide) { toSlide.style.transition = ''; toSlide.style.opacity = ''; }
+      }
+    }
+    requestAnimationFrame(step);
+    return true;
+  }
+
+  /* cascada de volteo: cada capa del slide saliente se voltea sobre su
+     propio eje vertical (como una ficha) revelando en su reverso ya la
+     capa correspondiente del slide entrante, en cascada de izquierda a
+     derecha -- el volteo (rotateY 0->180) es la unica señal, sin fades. */
+  function playCascadeFlip(fromSlide, toIndex){
+    var outLayers = getLayers(fromSlide);
+    var root = document.fullscreenElement || document.body;
+
+    var toSlide = slides[toIndex];
+    var inLayers = toSlide ? getLayers(toSlide) : [];
+    if (toSlide) {
+      toSlide.style.transition = 'none';
+      toSlide.style.opacity = '1';
+      toSlide.style.transform = 'none';
+    }
+    inLayers.forEach(function(l){ l.style.opacity = '0'; });
+
+    var pairs = outLayers.map(function(layer, i){
+      var lr = layer.getBoundingClientRect();
+      var outClone = layer.cloneNode(true);
+      var inTarget = inLayers[i];
+      var inClone = inTarget ? inTarget.cloneNode(true) : null;
+
+      var box = document.createElement('div');
+      box.style.position = 'fixed';
+      box.style.left = lr.left + 'px';
+      box.style.top = lr.top + 'px';
+      box.style.width = lr.width + 'px';
+      box.style.height = lr.height + 'px';
+      box.style.zIndex = '9999';
+      box.style.pointerEvents = 'none';
+      box.style.perspective = '1400px';
+
+      var flipper = document.createElement('div');
+      flipper.style.position = 'absolute';
+      flipper.style.inset = '0';
+      flipper.style.transformStyle = 'preserve-3d';
+      flipper.style.transformOrigin = '50% 50%';
+      box.appendChild(flipper);
+
+      outClone.style.position = 'absolute';
+      outClone.style.inset = '0';
+      outClone.style.width = '100%';
+      outClone.style.height = '100%';
+      outClone.style.margin = '0';
+      outClone.style.transform = 'none';
+      outClone.style.transition = 'none';
+      outClone.style.backfaceVisibility = 'hidden';
+      flipper.appendChild(outClone);
+
+      if (inClone) {
+        inClone.style.position = 'absolute';
+        inClone.style.inset = '0';
+        inClone.style.width = '100%';
+        inClone.style.height = '100%';
+        inClone.style.margin = '0';
+        inClone.style.transform = 'none';
+        inClone.style.transition = 'none';
+        inClone.style.backfaceVisibility = 'hidden';
+        inClone.style.transform = 'rotateY(180deg)';
+        flipper.appendChild(inClone);
+      }
+
+      root.appendChild(box);
+      return { box: box, flipper: flipper, delay: i * 90, inTarget: inTarget };
+    });
+
+    goTo(toIndex);
+
+    var duration = 560;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var elapsed = ts - startTime;
+      var allDone = true;
+      pairs.forEach(function(p){
+        var lt = Math.max(0, Math.min(1, (elapsed - p.delay) / duration));
+        if (lt < 1) allDone = false;
+        var eased = easeInOutCubic(lt);
+        var angle = eased * 180;
+        var lift = Math.sin(lt * Math.PI) * -26;
+        p.flipper.style.transform = 'translateZ(' + lift + 'px) rotateY(' + angle + 'deg)';
+      });
+      if (!allDone) {
+        requestAnimationFrame(step);
+      } else {
+        pairs.forEach(function(p){
+          p.box.remove();
+          if (p.inTarget) p.inTarget.style.opacity = '';
+        });
+        if (toSlide) toSlide.style.transition = '';
+      }
+    }
+    requestAnimationFrame(step);
+    return true;
+  }
+
   /* asignacion: que transicion usar al avanzar DESDE el slide de este indice
      (0-based) hacia el siguiente. Si no aparece aqui, se usa el scroll simple. */
   var TRANSITIONS = {
     1: playFragmentShatter,   // 2 -> 3
-    2: playScanReveal,        // 3 -> 4
-    3: playDepthDolly,        // 4 -> 5
-    4: playCircuitFrame,      // 5 -> 6
-    5: playFragmentShatter,   // 6 -> 7
+    2: playCubeRotate,        // 3 -> 4
+    3: playScanReveal,        // 4 -> 5
+    4: playCascadeFlip,       // 5 -> 6
+    5: playDepthDolly,        // 6 -> 7
     6: playCircuitFrame,      // 7 -> 8
-    7: playDepthDolly,        // 8 -> 9
+    7: playFragmentShatter,   // 8 -> 9
     8: playScanReveal,        // 9 -> 10
-    9: playFragmentShatter,   // 10 -> 11
+    9: playCubeRotate,        // 10 -> 11
     10: playDepthDolly,       // 11 -> 12
-    11: playScanReveal,       // 12 -> 13
+    11: playCascadeFlip,      // 12 -> 13
     12: playCircuitFrame,     // 13 -> 14
     13: playScanReveal,       // 14 -> 15
-    14: playDepthDolly,       // 15 -> 16
-    15: playFragmentShatter,  // 16 -> 17
-    16: playCircuitFrame,     // 17 -> 18
-    17: playDepthDolly,       // 18 -> 19
-    18: playFragmentShatter,  // 19 -> 20
+    14: playFragmentShatter,  // 15 -> 16
+    15: playDepthDolly,       // 16 -> 17
+    16: playCubeRotate,       // 17 -> 18
+    17: playCircuitFrame,     // 18 -> 19
+    18: playCascadeFlip,      // 19 -> 20
     19: playScanReveal,       // 20 -> 21
-    20: playCircuitFrame,     // 21 -> 22
+    20: playFragmentShatter,  // 21 -> 22
     21: playDepthDolly,       // 22 -> 23
-    22: playScanReveal,       // 23 -> 24
-    23: playFragmentShatter,  // 24 -> 25
-    24: playCircuitFrame      // 25 -> 26
+    22: playCircuitFrame,     // 23 -> 24
+    23: playCubeRotate,       // 24 -> 25
+    24: playCascadeFlip       // 25 -> 26
   };
 
   /* punto de entrada unico de navegacion: aplica el efecto que corresponda
