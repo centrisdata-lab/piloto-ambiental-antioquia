@@ -2136,7 +2136,13 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     return layers.length ? layers : [host];
   }
 
-  function goldFlash(centerX, centerY){
+  function goldFlash(centerX, centerY, opts){
+    opts = opts || {};
+    var count = opts.count || 14;
+    var maxDist = opts.maxDist || 130;
+    var duration = opts.duration || 620;
+    var ringCount = opts.rings === false ? 0 : 2;
+
     var flash = document.createElement('div');
     flash.style.position = 'fixed';
     flash.style.left = centerX + 'px';
@@ -2146,47 +2152,77 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     flash.style.marginLeft = '-5px';
     flash.style.marginTop = '-5px';
     flash.style.borderRadius = '50%';
-    flash.style.background = 'radial-gradient(circle, rgba(242,205,110,.95) 0%, rgba(217,165,42,.55) 35%, transparent 72%)';
+    flash.style.background = 'radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(242,205,110,.9) 25%, rgba(217,165,42,.5) 45%, transparent 72%)';
     flash.style.zIndex = '10001';
     flash.style.pointerEvents = 'none';
     flash.style.mixBlendMode = 'screen';
     (document.fullscreenElement || document.body).appendChild(flash);
 
+    // anillos de choque concentricos, escalonados
+    var rings = [];
+    for (var r = 0; r < ringCount; r++) {
+      var ring = document.createElement('div');
+      ring.style.position = 'fixed';
+      ring.style.left = centerX + 'px';
+      ring.style.top = centerY + 'px';
+      ring.style.width = '12px';
+      ring.style.height = '12px';
+      ring.style.marginLeft = '-6px';
+      ring.style.marginTop = '-6px';
+      ring.style.borderRadius = '50%';
+      ring.style.border = '1.5px solid rgba(242,205,110,.7)';
+      ring.style.boxShadow = '0 0 14px 0 rgba(242,205,110,.4)';
+      ring.style.zIndex = '10000';
+      ring.style.pointerEvents = 'none';
+      (document.fullscreenElement || document.body).appendChild(ring);
+      rings.push({ el: ring, delay: r * 110 });
+    }
+
     var particles = [];
-    var count = 7;
     for (var i = 0; i < count; i++) {
       var p = document.createElement('div');
-      var angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+      var angle = (Math.PI * 2 * i) / count + Math.random() * 0.35;
+      var size = 2.5 + Math.random() * 3.5;
       p.style.position = 'fixed';
       p.style.left = centerX + 'px';
       p.style.top = centerY + 'px';
-      p.style.width = '4px';
-      p.style.height = '4px';
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.marginLeft = (-size/2) + 'px';
+      p.style.marginTop = (-size/2) + 'px';
       p.style.borderRadius = '50%';
-      p.style.background = '#f2cd6e';
-      p.style.boxShadow = '0 0 6px 1px rgba(242,205,110,.8)';
+      p.style.background = i % 3 === 0 ? '#fff' : '#f2cd6e';
+      p.style.boxShadow = '0 0 8px 1px rgba(242,205,110,.85)';
       p.style.zIndex = '10001';
       p.style.pointerEvents = 'none';
       (document.fullscreenElement || document.body).appendChild(p);
-      particles.push({ el: p, angle: angle, dist: 46 + Math.random() * 34 });
+      particles.push({ el: p, angle: angle, dist: maxDist * 0.4 + Math.random() * maxDist * 0.6 });
     }
 
-    var duration = 460;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
-      var t = Math.min(1, (ts - startTime) / duration);
+      var elapsed = ts - startTime;
+      var t = Math.min(1, elapsed / duration);
       var growT = Math.min(1, t / 0.3);
       var scale = 1 + growT * 34;
       var fadeT = t < 0.35 ? 0 : (t - 0.35) / 0.65;
       flash.style.transform = 'scale(' + scale + ')';
       flash.style.opacity = String(1 - fadeT);
 
+      rings.forEach(function(rg){
+        var rt = Math.max(0, Math.min(1, (elapsed - rg.delay) / (duration * 0.85)));
+        var re = easeInOutCubic(rt);
+        var rscale = 1 + re * (maxDist / 6);
+        rg.el.style.transform = 'scale(' + rscale + ')';
+        rg.el.style.opacity = String((1 - re) * 0.8);
+      });
+
       particles.forEach(function(pt){
         var pe = easeInOutCubic(Math.min(1, t / 0.85));
         var dx = Math.cos(pt.angle) * pt.dist * pe;
         var dy = Math.sin(pt.angle) * pt.dist * pe;
-        pt.el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+        pt.el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + (1 - pe * 0.5) + ')';
         pt.el.style.opacity = String(1 - Math.min(1, t / 0.9));
       });
 
@@ -2194,19 +2230,74 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         requestAnimationFrame(step);
       } else {
         flash.remove();
+        rings.forEach(function(rg){ rg.el.remove(); });
         particles.forEach(function(pt){ pt.el.remove(); });
       }
     }
     requestAnimationFrame(step);
   }
 
-  /* fragmentacion por capas: cada bloque del slide saliente (kicker,
-     titulo, imagen, tarjetas...) se desliza hacia afuera en abanico con
-     un breve destello dorado en su borde; el slide entrante ensambla
-     sus propios bloques con la misma logica, escalonados en el tiempo. */
+  // franjas de "motion streak" doradas que cruzan la pantalla en una direccion,
+  // dan sensacion de velocidad/impacto durante el pico de una transicion.
+  function speedStreaks(direction, opts){
+    opts = opts || {};
+    var count = opts.count || 6;
+    var duration = opts.duration || 380;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var root = document.fullscreenElement || document.body;
+    var streaks = [];
+    for (var i = 0; i < count; i++) {
+      var s = document.createElement('div');
+      var thickness = 1 + Math.random() * 2.5;
+      var y = Math.random() * vh;
+      var len = vw * (0.25 + Math.random() * 0.4);
+      s.style.position = 'fixed';
+      s.style.top = y + 'px';
+      s.style.height = thickness + 'px';
+      s.style.width = len + 'px';
+      s.style.left = direction > 0 ? (-len) + 'px' : vw + 'px';
+      s.style.background = 'linear-gradient(' + (direction > 0 ? '90deg' : '270deg') + ', transparent, rgba(242,205,110,.75), transparent)';
+      s.style.zIndex = '9998';
+      s.style.pointerEvents = 'none';
+      s.style.opacity = '0';
+      root.appendChild(s);
+      streaks.push({ el: s, delay: Math.random() * 120, len: len });
+    }
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var elapsed = ts - startTime;
+      var alive = false;
+      streaks.forEach(function(st){
+        var lt = (elapsed - st.delay) / duration;
+        if (lt < 0) { alive = true; return; }
+        if (lt > 1) { st.el.style.opacity = '0'; return; }
+        alive = true;
+        var eased = lt;
+        var travel = (vw + st.len * 2) * eased;
+        var x = direction > 0 ? (-st.len + travel) : (vw - travel);
+        st.el.style.transform = 'translateX(' + (x - (direction > 0 ? -st.len : vw)) + 'px)';
+        st.el.style.opacity = String(lt < 0.15 ? lt / 0.15 : (lt > 0.7 ? (1 - lt) / 0.3 : 1));
+      });
+      if (alive) {
+        requestAnimationFrame(step);
+      } else {
+        streaks.forEach(function(st){ st.el.remove(); });
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* fragmentacion 3D: cada bloque del slide saliente (kicker, titulo,
+     imagen, tarjetas...) explota hacia afuera en el espacio con rotacion
+     real (perspective + rotateX/Y) y blur de movimiento, como piezas de
+     vidrio volando; el slide entrante ensambla sus propios bloques desde
+     profundidad negativa con la misma logica fisica, escalonados. */
   function playFragmentShatter(fromSlide, toIndex){
     var outRect = fromSlide.getBoundingClientRect();
     var outLayers = getLayers(fromSlide);
+    var cx = outRect.left + outRect.width / 2;
+    var cy = outRect.top + outRect.height / 2;
 
     var outClones = outLayers.map(function(layer, i){
       var lr = layer.getBoundingClientRect();
@@ -2220,7 +2311,8 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       box.style.overflow = 'visible';
       box.style.zIndex = '9999';
       box.style.pointerEvents = 'none';
-      box.style.filter = 'drop-shadow(0 0 0 rgba(242,205,110,0))';
+      box.style.transformStyle = 'preserve-3d';
+      box.style.willChange = 'transform, filter, opacity';
       c.style.margin = '0';
       c.style.width = '100%';
       c.style.height = '100%';
@@ -2228,12 +2320,25 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       c.style.transition = 'none';
       box.appendChild(c);
       (document.fullscreenElement || document.body).appendChild(box);
-      var dir = (i % 2 === 0) ? -1 : 1;
-      var vertical = i % 3 === 0;
-      return { box: box, dx: vertical ? (Math.random()*30-15) : dir * (70 + i * 14), dy: vertical ? dir * (60 + i * 10) : (Math.random()*20-10), delay: i * 40 };
+      // vector radial desde el centro del slide: cada pieza "explota" alejandose de su propio origen
+      var lcx = lr.left + lr.width / 2, lcy = lr.top + lr.height / 2;
+      var vx = lcx - cx, vy = lcy - cy;
+      var vlen = Math.max(1, Math.sqrt(vx * vx + vy * vy));
+      var nx = vx / vlen, ny = vy / vlen;
+      var jitter = (Math.random() - 0.5);
+      return {
+        box: box,
+        dx: nx * (110 + i * 16) + jitter * 40,
+        dy: ny * (90 + i * 12) + jitter * 26,
+        dz: -260 - i * 30 - Math.random() * 80,
+        rot: (jitter) * 50 - (i % 2 === 0 ? 18 : -18),
+        rotAxis: i % 2 === 0 ? 'Y' : 'X',
+        delay: i * 35
+      };
     });
 
-    goldFlash(outRect.left + outRect.width / 2, outRect.top + outRect.height / 2);
+    goldFlash(cx, cy, { count: 16, maxDist: 150, duration: 650 });
+    speedStreaks(1, { count: 5, duration: 420 });
 
     var toSlide = slides[toIndex];
     var inLayers = toSlide ? getLayers(toSlide) : [];
@@ -2241,18 +2346,27 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       toSlide.style.transition = 'none';
       toSlide.style.opacity = '1';
       toSlide.style.transform = 'none';
+      toSlide.style.perspective = '1400px';
     }
-    inLayers.forEach(function(layer, i){
+    var inMeta = inLayers.map(function(layer, i){
       layer.style.transition = 'none';
       layer.style.opacity = '0';
+      layer.style.transformStyle = 'preserve-3d';
       var dir = (i % 2 === 0) ? 1 : -1;
-      layer.style.transform = 'translate(' + (dir * 26) + 'px,' + (10 + i * 4) + 'px)';
-      layer.style.filter = 'drop-shadow(0 0 0 rgba(242,205,110,0))';
+      var jitter = (Math.random() - 0.5);
+      return {
+        el: layer,
+        dx: dir * (60 + i * 10) + jitter * 30,
+        dy: (16 + i * 5) * -dir,
+        dz: -420 - i * 20,
+        rot: dir * (34 - i * 2),
+        rotAxis: i % 2 === 0 ? 'Y' : 'X'
+      };
     });
     goTo(toIndex);
 
-    var outDuration = 480;
-    var inDuration = 560;
+    var outDuration = 560;
+    var inDuration = 680;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -2261,47 +2375,99 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       outClones.forEach(function(o){
         var lt = Math.max(0, Math.min(1, (elapsed - o.delay) / outDuration));
         var eased = easeInOutCubic(lt);
-        o.box.style.transform = 'translate(' + (o.dx * eased) + 'px,' + (o.dy * eased) + 'px) scale(' + (1 - eased * 0.08) + ')';
-        o.box.style.opacity = String(1 - eased);
-        var glow = lt > 0 && lt < 0.5 ? (1 - Math.abs(lt - 0.25) / 0.25) * 10 : 0;
-        o.box.style.filter = 'drop-shadow(0 0 ' + glow + 'px rgba(242,205,110,.8))';
+        var rotAmt = o.rot * eased;
+        o.box.style.transform = 'perspective(1000px) translate3d(' + (o.dx * eased) + 'px,' + (o.dy * eased) + 'px,' + (o.dz * eased) + 'px) rotate' + o.rotAxis + '(' + rotAmt + 'deg) scale(' + (1 - eased * 0.15) + ')';
+        o.box.style.opacity = String(1 - eased * eased);
+        var blur = Math.sin(lt * Math.PI) * 3.5;
+        var glow = lt > 0 && lt < 0.5 ? (1 - Math.abs(lt - 0.25) / 0.25) * 12 : 0;
+        o.box.style.filter = 'blur(' + blur.toFixed(1) + 'px) drop-shadow(0 0 ' + glow + 'px rgba(242,205,110,.85))';
       });
 
-      inLayers.forEach(function(layer, i){
-        var delay = 90 + i * 70;
+      inMeta.forEach(function(o, i){
+        var delay = 110 + i * 65;
         var lt = Math.max(0, Math.min(1, (elapsed - delay) / inDuration));
         var eased = easeInOutCubic(lt);
-        var dir = (i % 2 === 0) ? 1 : -1;
-        layer.style.opacity = String(eased);
-        layer.style.transform = 'translate(' + (dir * 26 * (1 - eased)) + 'px,' + ((10 + i * 4) * (1 - eased)) + 'px)';
-        var glow = lt > 0 && lt < 0.6 ? (1 - Math.abs(lt - 0.3) / 0.3) * 8 : 0;
-        layer.style.filter = 'drop-shadow(0 0 ' + Math.max(0, glow) + 'px rgba(242,205,110,.7))';
+        var inv = 1 - eased;
+        o.el.style.opacity = String(eased);
+        var rotAmt = o.rot * inv;
+        o.el.style.transform = 'perspective(1400px) translate3d(' + (o.dx * inv) + 'px,' + (o.dy * inv) + 'px,' + (o.dz * inv) + 'px) rotate' + o.rotAxis + '(' + rotAmt + 'deg)';
+        var blur = Math.sin(lt * Math.PI) * 2.5;
+        var glow = lt > 0 && lt < 0.6 ? (1 - Math.abs(lt - 0.3) / 0.3) * 9 : 0;
+        o.el.style.filter = 'blur(' + blur.toFixed(1) + 'px) drop-shadow(0 0 ' + Math.max(0, glow) + 'px rgba(242,205,110,.75))';
       });
 
-      var allOutDone = elapsed > outDuration + outClones.length * 40;
-      var allInDone = elapsed > inDuration + inLayers.length * 70 + 90;
+      var allOutDone = elapsed > outDuration + outClones.length * 35;
+      var allInDone = elapsed > inDuration + inMeta.length * 65 + 110;
       if (!allOutDone || !allInDone) {
         requestAnimationFrame(step);
       } else {
         outClones.forEach(function(o){ o.box.remove(); });
-        inLayers.forEach(function(layer){
-          layer.style.transition = '';
-          layer.style.opacity = '';
-          layer.style.transform = '';
-          layer.style.filter = '';
+        inMeta.forEach(function(o){
+          o.el.style.transition = '';
+          o.el.style.opacity = '';
+          o.el.style.transform = '';
+          o.el.style.filter = '';
+          o.el.style.transformStyle = '';
         });
-        if (toSlide) toSlide.style.transition = '';
+        if (toSlide) { toSlide.style.transition = ''; toSlide.style.perspective = ''; }
       }
     }
     requestAnimationFrame(step);
     return true;
   }
 
-  /* scan-reveal: una linea de escaneo dorada recorre la pantalla; el
-     slide entrante queda enmascarado y se va revelando de arriba a
-     abajo a medida que la linea avanza, con un breve resplandor. */
+  /* scan-reveal HUD: una doble linea de escaneo dorada recorre la pantalla
+     sobre una grilla tipo radar; el slide saliente se "desintegra" en
+     franjas horizontales con jitter tipo glitch mientras el entrante se
+     revela de arriba a abajo detras de la linea con leve aberracion
+     cromatica en el frente de avance. */
   function playScanReveal(fromSlide, toIndex){
     var outWrap = captureSnapshot(fromSlide);
+    var outRect = fromSlide.getBoundingClientRect();
+    var root = document.fullscreenElement || document.body;
+
+    // grilla HUD de fondo, se desvanece rapido
+    var grid = document.createElement('div');
+    grid.style.position = 'fixed';
+    grid.style.left = outRect.left + 'px';
+    grid.style.top = outRect.top + 'px';
+    grid.style.width = outRect.width + 'px';
+    grid.style.height = outRect.height + 'px';
+    grid.style.zIndex = '9997';
+    grid.style.pointerEvents = 'none';
+    grid.style.backgroundImage = 'linear-gradient(rgba(242,205,110,.16) 1px, transparent 1px), linear-gradient(90deg, rgba(242,205,110,.16) 1px, transparent 1px)';
+    grid.style.backgroundSize = '38px 38px';
+    grid.style.opacity = '0';
+    root.appendChild(grid);
+
+    // franjas de "glitch" recortadas del slide saliente, con jitter horizontal aleatorio
+    var stripeCount = 9;
+    var stripes = [];
+    for (var i = 0; i < stripeCount; i++) {
+      var sh = outRect.height / stripeCount;
+      var sTop = outRect.top + i * sh;
+      var strip = fromSlide.cloneNode(true);
+      var stripBox = document.createElement('div');
+      stripBox.style.position = 'fixed';
+      stripBox.style.left = outRect.left + 'px';
+      stripBox.style.top = sTop + 'px';
+      stripBox.style.width = outRect.width + 'px';
+      stripBox.style.height = sh + 'px';
+      stripBox.style.overflow = 'hidden';
+      stripBox.style.zIndex = '9998';
+      stripBox.style.pointerEvents = 'none';
+      strip.style.position = 'absolute';
+      strip.style.left = '0';
+      strip.style.top = (-i * sh) + 'px';
+      strip.style.width = outRect.width + 'px';
+      strip.style.height = outRect.height + 'px';
+      strip.style.transform = 'none';
+      strip.style.transition = 'none';
+      stripBox.appendChild(strip);
+      root.appendChild(stripBox);
+      stripes.push({ el: stripBox, delay: i * 22, jitter: (Math.random() - 0.5) * 46 });
+    }
+    outWrap.style.opacity = '0'; // las franjas reemplazan visualmente al snapshot completo
 
     var toSlide = slides[toIndex];
     goTo(toIndex);
@@ -2310,49 +2476,80 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     scanLine.style.position = 'fixed';
     scanLine.style.left = '0';
     scanLine.style.right = '0';
-    scanLine.style.height = '3px';
+    scanLine.style.height = '4px';
     scanLine.style.zIndex = '10000';
     scanLine.style.background = 'linear-gradient(90deg, transparent, #f2cd6e 20%, #fff 50%, #f2cd6e 80%, transparent)';
-    scanLine.style.boxShadow = '0 0 22px 4px rgba(242,205,110,.85), 0 0 60px 10px rgba(242,205,110,.35)';
+    scanLine.style.boxShadow = '0 0 26px 5px rgba(242,205,110,.9), 0 0 70px 14px rgba(242,205,110,.4)';
     scanLine.style.pointerEvents = 'none';
-    (document.fullscreenElement || document.body).appendChild(scanLine);
+    root.appendChild(scanLine);
+
+    var scanLine2 = document.createElement('div');
+    scanLine2.style.position = 'fixed';
+    scanLine2.style.left = '0';
+    scanLine2.style.right = '0';
+    scanLine2.style.height = '1px';
+    scanLine2.style.zIndex = '9999';
+    scanLine2.style.background = 'rgba(242,205,110,.5)';
+    scanLine2.style.pointerEvents = 'none';
+    root.appendChild(scanLine2);
 
     if (toSlide) {
       toSlide.style.transition = 'none';
       toSlide.style.opacity = '1';
       toSlide.style.clipPath = 'inset(0 0 100% 0)';
       toSlide.style.transform = 'none';
+      toSlide.style.filter = 'saturate(1.4) brightness(1.08)';
     }
 
-    var duration = 700;
+    var duration = 900;
     var startTime = null;
     var toRectCache = toSlide ? toSlide.getBoundingClientRect() : null;
     function step(ts){
       if (startTime === null) startTime = ts;
-      var t = Math.min(1, (ts - startTime) / duration);
+      var elapsed = ts - startTime;
+      var t = Math.min(1, elapsed / duration);
       var eased = easeInOutCubic(t);
 
-      outWrap.style.opacity = String(Math.max(0, 1 - t * 1.6));
+      grid.style.opacity = String(t < 0.5 ? Math.min(1, t / 0.15) * 0.9 : Math.max(0, 0.9 - (t - 0.5) / 0.5));
+
+      stripes.forEach(function(st){
+        var lt = Math.max(0, Math.min(1, (elapsed - st.delay) / 340));
+        var e2 = easeInOutCubic(lt);
+        var jx = Math.sin(lt * Math.PI) * st.jitter;
+        st.el.style.transform = 'translateX(' + (jx + e2 * (st.jitter > 0 ? 260 : -260)) + 'px)';
+        st.el.style.opacity = String(1 - e2);
+      });
 
       var rect = toSlide ? toSlide.getBoundingClientRect() : toRectCache;
       var lineY = rect.top + rect.height * eased;
       scanLine.style.top = lineY + 'px';
-      scanLine.style.opacity = t > 0.92 ? String((1 - t) / 0.08) : '1';
+      scanLine2.style.top = (lineY - 10) + 'px';
+      var edgeFade = t > 0.9 ? String((1 - t) / 0.1) : '1';
+      scanLine.style.opacity = edgeFade;
+      scanLine2.style.opacity = edgeFade;
 
       if (toSlide) {
         toSlide.style.clipPath = 'inset(0 0 ' + (100 - eased * 100) + '% 0)';
+        var chroma = (1 - eased) * 2.2;
+        toSlide.style.filter = chroma > 0.05
+          ? 'saturate(' + (1 + chroma * 0.3) + ') brightness(' + (1 + chroma * 0.08) + ') drop-shadow(' + chroma + 'px 0 0 rgba(255,90,90,.25)) drop-shadow(-' + chroma + 'px 0 0 rgba(90,200,255,.25))'
+          : '';
       }
 
       if (t < 1) {
         requestAnimationFrame(step);
       } else {
         outWrap.remove();
+        grid.remove();
         scanLine.remove();
+        scanLine2.remove();
+        stripes.forEach(function(st){ st.el.remove(); });
         if (toSlide) {
           toSlide.style.transition = '';
           toSlide.style.clipPath = '';
           toSlide.style.opacity = '';
           toSlide.style.transform = '';
+          toSlide.style.filter = '';
         }
       }
     }
@@ -2360,40 +2557,91 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     return true;
   }
 
-  /* borde de circuito: un marco dorado se dibuja alrededor del slide
-     entrante (como el HUD de una interfaz), mientras el contenido hace
-     un leve zoom-in de asentamiento y el saliente se atenua con un
-     ligero desplazamiento hacia el fondo (profundidad). */
+  /* marco HUD: 4 escuadras tipo mira/interfaz militar convergen desde
+     las esquinas de la pantalla y se cierran sobre el slide entrante,
+     con un doble marco dorado y lineas internas de "calibracion" que
+     se dibujan; el saliente se hunde en profundidad con blur y rotacion
+     leve, dando sensacion de dolly-zoom hacia el nuevo contenido. */
   function playCircuitFrame(fromSlide, toIndex){
     var outWrap = captureSnapshot(fromSlide);
+    var outRect = fromSlide.getBoundingClientRect();
+    var root = document.fullscreenElement || document.body;
+    outWrap.style.transformStyle = 'preserve-3d';
 
     var toSlide = slides[toIndex];
     if (toSlide) {
       toSlide.style.transition = 'none';
       toSlide.style.opacity = '0';
-      toSlide.style.transform = 'scale(.97)';
+      toSlide.style.transform = 'scale(.88)';
+      toSlide.style.filter = 'blur(6px)';
     }
 
     goTo(toIndex);
 
+    var borderRadius = getComputedStyle(fromSlide).borderRadius || '6px';
     var frame = document.createElement('div');
     frame.style.position = 'fixed';
     frame.style.zIndex = '10000';
     frame.style.pointerEvents = 'none';
     frame.style.border = '1.5px solid rgba(242,205,110,.9)';
-    frame.style.boxShadow = '0 0 0 1px rgba(242,205,110,.25), 0 0 24px -2px rgba(242,205,110,.55)';
-    frame.style.borderRadius = getComputedStyle(fromSlide).borderRadius || '6px';
-    (document.fullscreenElement || document.body).appendChild(frame);
+    frame.style.boxShadow = '0 0 0 1px rgba(242,205,110,.2), inset 0 0 0 1px rgba(242,205,110,.2), 0 0 30px -2px rgba(242,205,110,.6)';
+    frame.style.borderRadius = borderRadius;
+    root.appendChild(frame);
 
-    var duration = 620;
+    // 4 escuadras (corner brackets) que vuelan desde las esquinas de la pantalla
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var corners = [
+      { ox: -vw * 0.15, oy: -vh * 0.15, cx: 'left', cy: 'top' },
+      { ox: vw * 0.15, oy: -vh * 0.15, cx: 'right', cy: 'top' },
+      { ox: -vw * 0.15, oy: vh * 0.15, cx: 'left', cy: 'bottom' },
+      { ox: vw * 0.15, oy: vh * 0.15, cx: 'right', cy: 'bottom' }
+    ].map(function(c){
+      var el = document.createElement('div');
+      var size = 34;
+      el.style.position = 'fixed';
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.style.zIndex = '10001';
+      el.style.pointerEvents = 'none';
+      var bw = '3px solid #f2cd6e';
+      el.style.borderTop = c.cy === 'top' ? bw : 'none';
+      el.style.borderBottom = c.cy === 'bottom' ? bw : 'none';
+      el.style.borderLeft = c.cx === 'left' ? bw : 'none';
+      el.style.borderRight = c.cx === 'right' ? bw : 'none';
+      el.style.filter = 'drop-shadow(0 0 6px rgba(242,205,110,.85))';
+      root.appendChild(el);
+      return { el: el, cx: c.cx, cy: c.cy, ox: c.ox, oy: c.oy, size: size };
+    });
+
+    // lineas de calibracion internas (horizontal + vertical) que se dibujan desde el centro
+    var calibH = document.createElement('div');
+    calibH.style.position = 'fixed';
+    calibH.style.height = '1px';
+    calibH.style.background = 'rgba(242,205,110,.55)';
+    calibH.style.zIndex = '10000';
+    calibH.style.pointerEvents = 'none';
+    root.appendChild(calibH);
+    var calibV = document.createElement('div');
+    calibV.style.position = 'fixed';
+    calibV.style.width = '1px';
+    calibV.style.background = 'rgba(242,205,110,.55)';
+    calibV.style.zIndex = '10000';
+    calibV.style.pointerEvents = 'none';
+    root.appendChild(calibV);
+
+    goldFlash(outRect.left + outRect.width / 2, outRect.top + outRect.height / 2, { count: 10, maxDist: 90, duration: 500, rings: false });
+
+    var duration = 780;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
-      var t = Math.min(1, (ts - startTime) / duration);
+      var elapsed = ts - startTime;
+      var t = Math.min(1, elapsed / duration);
       var eased = easeInOutCubic(t);
 
-      outWrap.style.opacity = String(Math.max(0, 1 - t * 1.4));
-      outWrap.style.transform = 'scale(' + (1 - eased * 0.03) + ')';
+      outWrap.style.opacity = String(Math.max(0, 1 - t * 1.3));
+      outWrap.style.transform = 'perspective(1200px) scale(' + (1 - eased * 0.1) + ') translateZ(' + (-eased * 140) + 'px) rotateY(' + (eased * 6) + 'deg)';
+      outWrap.style.filter = 'blur(' + (eased * 5).toFixed(1) + 'px)';
 
       var rect = toSlide ? toSlide.getBoundingClientRect() : outWrap.getBoundingClientRect();
       var inset = (1 - eased) * 18;
@@ -2401,11 +2649,34 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       frame.style.top = (rect.top - inset) + 'px';
       frame.style.width = (rect.width + inset * 2) + 'px';
       frame.style.height = (rect.height + inset * 2) + 'px';
-      frame.style.opacity = t < 0.15 ? String(t / 0.15) : (t > 0.75 ? String((1 - t) / 0.25) : '1');
+      frame.style.opacity = t < 0.15 ? String(t / 0.15) : (t > 0.8 ? String((1 - t) / 0.2) : '1');
+
+      var cornerT = Math.min(1, t / 0.55);
+      var cornerE = easeInOutCubic(cornerT);
+      corners.forEach(function(c){
+        var targetX = c.cx === 'left' ? rect.left - 6 : rect.right + 6 - c.size;
+        var targetY = c.cy === 'top' ? rect.top - 6 : rect.bottom + 6 - c.size;
+        var startX = targetX + c.ox, startY = targetY + c.oy;
+        c.el.style.left = (startX + (targetX - startX) * cornerE) + 'px';
+        c.el.style.top = (startY + (targetY - startY) * cornerE) + 'px';
+        c.el.style.opacity = String(cornerT < 0.2 ? cornerT / 0.2 : (t > 0.85 ? (1 - t) / 0.15 : 1));
+      });
+
+      var calibT = t < 0.5 ? Math.min(1, t / 0.4) : Math.max(0, 1 - (t - 0.5) / 0.35);
+      var calibCx = rect.left + rect.width / 2, calibCy = rect.top + rect.height / 2;
+      calibH.style.top = calibCy + 'px';
+      calibH.style.left = (calibCx - (rect.width / 2) * calibT) + 'px';
+      calibH.style.width = (rect.width * calibT) + 'px';
+      calibH.style.opacity = String(calibT);
+      calibV.style.left = calibCx + 'px';
+      calibV.style.top = (calibCy - (rect.height / 2) * calibT) + 'px';
+      calibV.style.height = (rect.height * calibT) + 'px';
+      calibV.style.opacity = String(calibT);
 
       if (toSlide) {
         toSlide.style.opacity = String(eased);
-        toSlide.style.transform = 'scale(' + (0.97 + eased * 0.03) + ')';
+        toSlide.style.transform = 'scale(' + (0.88 + eased * 0.12) + ')';
+        toSlide.style.filter = 'blur(' + ((1 - eased) * 6).toFixed(1) + 'px)';
       }
 
       if (t < 1) {
@@ -2413,10 +2684,88 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       } else {
         outWrap.remove();
         frame.remove();
+        calibH.remove();
+        calibV.remove();
+        corners.forEach(function(c){ c.el.remove(); });
         if (toSlide) {
           toSlide.style.transition = '';
           toSlide.style.opacity = '';
           toSlide.style.transform = '';
+          toSlide.style.filter = '';
+        }
+      }
+    }
+    requestAnimationFrame(step);
+    return true;
+  }
+
+  /* vuelo de profundidad: el slide saliente se inclina y cae hacia atras
+     en el espacio 3D como una tarjeta soltada, mientras el entrante llega
+     desde el fondo (translateZ negativo) acelerando hacia la camara con
+     estelas de velocidad radiales -- sensacion de "vuelo" entre capitulos. */
+  function playDepthDolly(fromSlide, toIndex){
+    var outWrap = captureSnapshot(fromSlide);
+    var outRect = fromSlide.getBoundingClientRect();
+    var root = document.fullscreenElement || document.body;
+    outWrap.style.transformStyle = 'preserve-3d';
+    outWrap.style.transformOrigin = '50% 100%';
+
+    var vignette = document.createElement('div');
+    vignette.style.position = 'fixed';
+    vignette.style.inset = '0';
+    vignette.style.zIndex = '9997';
+    vignette.style.pointerEvents = 'none';
+    vignette.style.background = 'radial-gradient(circle at 50% 50%, transparent 35%, rgba(10,14,10,.55) 100%)';
+    vignette.style.opacity = '0';
+    root.appendChild(vignette);
+
+    var toSlide = slides[toIndex];
+    if (toSlide) {
+      toSlide.style.transition = 'none';
+      toSlide.style.opacity = '0';
+      toSlide.style.transform = 'perspective(1200px) translateZ(-520px) scale(.7)';
+      toSlide.style.filter = 'brightness(1.5) blur(2px)';
+      toSlide.style.transformOrigin = '50% 50%';
+    }
+
+    goTo(toIndex);
+    speedStreaks(-1, { count: 8, duration: 520 });
+    goldFlash(outRect.left + outRect.width / 2, outRect.top + outRect.height * 0.5, { count: 12, maxDist: 160, duration: 560 });
+
+    var duration = 820;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var elapsed = ts - startTime;
+      var t = Math.min(1, elapsed / duration);
+      var eased = easeInOutCubic(t);
+
+      vignette.style.opacity = String(t < 0.4 ? t / 0.4 : Math.max(0, 1 - (t - 0.4) / 0.6));
+
+      var fallE = easeInOutCubic(Math.min(1, t / 0.85));
+      outWrap.style.transform = 'perspective(1100px) rotateX(' + (-fallE * 55) + 'deg) translateY(' + (fallE * 60) + 'px) translateZ(' + (-fallE * 340) + 'px) scale(' + (1 - fallE * 0.2) + ')';
+      outWrap.style.opacity = String(Math.max(0, 1 - t * 1.5));
+      outWrap.style.filter = 'blur(' + (fallE * 4).toFixed(1) + 'px)';
+
+      if (toSlide) {
+        var inE = eased;
+        toSlide.style.opacity = String(Math.min(1, t / 0.55));
+        toSlide.style.transform = 'perspective(1200px) translateZ(' + (-520 * (1 - inE)) + 'px) scale(' + (0.7 + inE * 0.3) + ')';
+        var blurAmt = Math.max(0, (1 - t / 0.6) * 2);
+        toSlide.style.filter = 'brightness(' + (1 + (1 - inE) * 0.5) + ') blur(' + blurAmt.toFixed(1) + 'px)';
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        outWrap.remove();
+        vignette.remove();
+        if (toSlide) {
+          toSlide.style.transition = '';
+          toSlide.style.opacity = '';
+          toSlide.style.transform = '';
+          toSlide.style.filter = '';
+          toSlide.style.transformOrigin = '';
         }
       }
     }
@@ -2427,20 +2776,30 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
   /* asignacion: que transicion usar al avanzar DESDE el slide de este indice
      (0-based) hacia el siguiente. Si no aparece aqui, se usa el scroll simple. */
   var TRANSITIONS = {
-    1: playFragmentShatter,   // 2 -> 3 (lineas estrategicas -> reseña historica)
-    2: playScanReveal,        // 3 -> 4 (reseña -> gran oportunidad)
-    5: playFragmentShatter,   // 6 -> 7 (objetivo general -> problematicas: entra en detalle)
-    6: playCircuitFrame,      // 7 -> 8 (problematicas -> evidencia visual)
-    8: playScanReveal,        // 9 -> 10 (objetivos especificos -> propuesta metodologica: nuevo capitulo)
-    10: playFragmentShatter,  // 11 -> 12 (poblacion -> organizaciones)
-    12: playCircuitFrame,     // 13 -> 14 (fases del concurso -> Medellin)
-    13: playScanReveal,       // 14 -> 15 (Medellin -> tabla de premios: nuevo capitulo)
-    15: playFragmentShatter,  // 16 -> 17 (organigrama -> cronograma)
-    17: playCircuitFrame,     // 18 -> 19 (fases y clausura -> desfile)
-    18: playFragmentShatter,  // 19 -> 20 (desfile -> socializacion)
-    20: playCircuitFrame,     // 21 -> 22 (premio -> redes y politicas)
-    22: playScanReveal,       // 23 -> 24 (poblacion subregion -> proyecto transversal: nuevo capitulo)
-    24: playFragmentShatter   // 25 -> 26 (mensaje inspirador -> cierre)
+    1: playFragmentShatter,   // 2 -> 3
+    2: playScanReveal,        // 3 -> 4
+    3: playDepthDolly,        // 4 -> 5
+    4: playCircuitFrame,      // 5 -> 6
+    5: playFragmentShatter,   // 6 -> 7
+    6: playCircuitFrame,      // 7 -> 8
+    7: playDepthDolly,        // 8 -> 9
+    8: playScanReveal,        // 9 -> 10
+    9: playFragmentShatter,   // 10 -> 11
+    10: playDepthDolly,       // 11 -> 12
+    11: playScanReveal,       // 12 -> 13
+    12: playCircuitFrame,     // 13 -> 14
+    13: playScanReveal,       // 14 -> 15
+    14: playDepthDolly,       // 15 -> 16
+    15: playFragmentShatter,  // 16 -> 17
+    16: playCircuitFrame,     // 17 -> 18
+    17: playDepthDolly,       // 18 -> 19
+    18: playFragmentShatter,  // 19 -> 20
+    19: playScanReveal,       // 20 -> 21
+    20: playCircuitFrame,     // 21 -> 22
+    21: playDepthDolly,       // 22 -> 23
+    22: playScanReveal,       // 23 -> 24
+    23: playFragmentShatter,  // 24 -> 25
+    24: playCircuitFrame      // 25 -> 26
   };
 
   /* punto de entrada unico de navegacion: aplica el efecto que corresponda
@@ -2461,7 +2820,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         if (withGuard(playMapMorph, 1200)) return;
       }
       var effect = TRANSITIONS[current];
-      if (effect && withGuard(function(){ return effect(slides[current], i); }, 1000)) return;
+      if (effect && withGuard(function(){ return effect(slides[current], i); }, 1500)) return;
       transitionInProgress = false;
     }
     goTo(i);
