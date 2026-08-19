@@ -2542,6 +2542,15 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       toSlide.style.transform = 'none';
       toSlide.style.filter = 'saturate(1.4) brightness(1.08)';
     }
+    // ademas del barrido de mascara, cada capa entra por separado (opacidad +
+    // leve elevacion) escalonada, para que se perciba que los elementos van
+    // apareciendo uno a uno detras de la linea de escaneo, no todos de golpe.
+    var inLayers = toSlide ? getLayers(toSlide) : [];
+    inLayers.forEach(function(l){
+      l.style.transition = 'none';
+      l.style.opacity = '0';
+      l.style.transform = 'translateY(16px)';
+    });
 
     var duration = 1450;
     var startTime = null;
@@ -2581,7 +2590,15 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
           : '';
       }
 
-      if (t < 1) {
+      inLayers.forEach(function(l, i){
+        var ld = Math.max(0, Math.min(1, (elapsed - (120 + i * 130)) / 420));
+        var le = easeInOutCubic(ld);
+        l.style.opacity = String(le);
+        l.style.transform = 'translateY(' + (16 * (1 - le)) + 'px)';
+      });
+
+      var layersDone = elapsed > 120 + inLayers.length * 130 + 420;
+      if (t < 1 || !layersDone) {
         requestAnimationFrame(step);
       } else {
         outWrap.remove();
@@ -2596,6 +2613,11 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
           toSlide.style.transform = '';
           toSlide.style.filter = '';
         }
+        inLayers.forEach(function(l){
+          l.style.transition = '';
+          l.style.opacity = '';
+          l.style.transform = '';
+        });
       }
     }
     requestAnimationFrame(step);
@@ -2620,6 +2642,14 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       toSlide.style.transform = 'scale(.88)';
       toSlide.style.filter = 'blur(6px)';
     }
+    // el contenedor entero hace el dolly-zoom (marco/estructura), pero el
+    // contenido interno aparece capa por capa, escalonado, no todo de golpe.
+    var inLayers = toSlide ? getLayers(toSlide) : [];
+    inLayers.forEach(function(l){
+      l.style.transition = 'none';
+      l.style.opacity = '0';
+      l.style.transform = 'translateY(14px) scale(.97)';
+    });
 
     goTo(toIndex);
 
@@ -2728,13 +2758,26 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         toSlide.style.filter = 'blur(' + ((1 - eased) * 6).toFixed(1) + 'px)';
       }
 
-      if (t < 1) {
+      inLayers.forEach(function(l, i){
+        var ld = Math.max(0, Math.min(1, (elapsed - (300 + i * 110)) / 420));
+        var le = easeInOutCubic(ld);
+        l.style.opacity = String(le);
+        l.style.transform = 'translateY(' + (14 * (1 - le)) + 'px) scale(' + (0.97 + 0.03 * le) + ')';
+      });
+
+      var layersDone = elapsed > 300 + inLayers.length * 110 + 420;
+      if (t < 1 || !layersDone) {
         requestAnimationFrame(step);
       } else {
         outWrap.remove();
         frame.remove();
         calibH.remove();
         calibV.remove();
+        inLayers.forEach(function(l){
+          l.style.transition = '';
+          l.style.opacity = '';
+          l.style.transform = '';
+        });
         corners.forEach(function(c){ c.el.remove(); });
         if (toSlide) {
           toSlide.style.transition = '';
@@ -2776,6 +2819,15 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       toSlide.style.filter = 'brightness(1.5) blur(2px)';
       toSlide.style.transformOrigin = '50% 50%';
     }
+    // el conjunto llega volando desde el fondo, y sobre ese vuelo cada capa
+    // interna hace su propio asentamiento final escalonado, para que se
+    // perciba que los elementos van apareciendo uno a uno al llegar.
+    var inLayers = toSlide ? getLayers(toSlide) : [];
+    inLayers.forEach(function(l){
+      l.style.transition = 'none';
+      l.style.opacity = '0';
+      l.style.transform = 'translateY(12px)';
+    });
 
     goTo(toIndex);
     speedStreaks(-1, { count: 9, duration: 780 });
@@ -2805,7 +2857,15 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         toSlide.style.filter = 'brightness(' + (1 + (1 - inE) * 0.5) + ') blur(' + blurAmt.toFixed(1) + 'px)';
       }
 
-      if (t < 1) {
+      inLayers.forEach(function(l, i){
+        var ld = Math.max(0, Math.min(1, (elapsed - (420 + i * 100)) / 400));
+        var le = easeInOutCubic(ld);
+        l.style.opacity = String(le);
+        l.style.transform = 'translateY(' + (12 * (1 - le)) + 'px)';
+      });
+
+      var layersDone = elapsed > 420 + inLayers.length * 100 + 400;
+      if (t < 1 || !layersDone) {
         requestAnimationFrame(step);
       } else {
         outWrap.remove();
@@ -2817,6 +2877,11 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
           toSlide.style.filter = '';
           toSlide.style.transformOrigin = '';
         }
+        inLayers.forEach(function(l){
+          l.style.transition = '';
+          l.style.opacity = '';
+          l.style.transform = '';
+        });
       }
     }
     requestAnimationFrame(step);
@@ -2856,6 +2921,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
 
     var toSlide = slides[toIndex];
     var inFace = toSlide ? toSlide.cloneNode(true) : null;
+    var inFaceLayers = [];
     if (inFace) {
       inFace.style.position = 'absolute';
       inFace.style.inset = '0';
@@ -2866,6 +2932,14 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       inFace.style.transformOrigin = 'left center';
       inFace.style.backfaceVisibility = 'hidden';
       stage.appendChild(inFace);
+      // los elementos internos de la cara entrante aparecen uno a uno
+      // mientras el cubo termina de girar, no todos de golpe al final.
+      inFaceLayers = getLayers(inFace);
+      inFaceLayers.forEach(function(l){
+        l.style.transition = 'none';
+        l.style.opacity = '0';
+        l.style.transform = 'translateY(10px)';
+      });
     }
 
     if (toSlide) {
@@ -2880,7 +2954,8 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
-      var t = Math.min(1, (ts - startTime) / duration);
+      var elapsedMs = ts - startTime;
+      var t = Math.min(1, elapsedMs / duration);
       var eased = easeInOutCubic(t);
 
       var angle = eased * 90;
@@ -2892,7 +2967,15 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         inFace.style.filter = angle < 45 ? 'brightness(' + (0.5 + angle / 45 * 0.5) + ')' : 'none';
       }
 
-      if (t < 1) {
+      inFaceLayers.forEach(function(l, i){
+        var ld = Math.max(0, Math.min(1, (elapsedMs - (500 + i * 90)) / 380));
+        var le = easeInOutCubic(ld);
+        l.style.opacity = String(le);
+        l.style.transform = 'translateY(' + (10 * (1 - le)) + 'px)';
+      });
+
+      var layersDone = elapsedMs > 500 + inFaceLayers.length * 90 + 380;
+      if (t < 1 || !layersDone) {
         requestAnimationFrame(step);
       } else {
         stage.remove();
