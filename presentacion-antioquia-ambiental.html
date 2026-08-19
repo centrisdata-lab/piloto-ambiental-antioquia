@@ -1981,11 +1981,16 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     var slide1 = slides[0];
     var slide2 = slides[1];
     if (!source || !slide1 || !slide2) return false;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    // nota: este efecto ignora prefers-reduced-motion a proposito (pedido explicito),
+    // a diferencia de los demas hovers/animaciones de la presentacion que si lo respetan.
 
     var srcRect = source.getBoundingClientRect();
     var startLeft = srcRect.left, startTop = srcRect.top;
     var startWidth = srcRect.width, startHeight = srcRect.height;
+
+    // en pantalla completa, los elementos position:fixed deben vivir dentro del
+    // elemento en fullscreen (el top layer), o no se pintan encima del resto.
+    var morphContainer = document.fullscreenElement || document.body;
 
     // overlay negro detras del clon para tapar el resto de la pagina mientras crece
     var backdrop = document.createElement('div');
@@ -1995,7 +2000,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     backdrop.style.opacity = '0';
     backdrop.style.zIndex = '9998';
     backdrop.style.pointerEvents = 'none';
-    document.body.appendChild(backdrop);
+    morphContainer.appendChild(backdrop);
 
     var clone = source.cloneNode(true);
     clone.removeAttribute('id');
@@ -2009,7 +2014,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     clone.style.opacity = '1';
     clone.style.pointerEvents = 'none';
     clone.style.willChange = 'left, top, width, height';
-    document.body.appendChild(clone);
+    morphContainer.appendChild(clone);
 
     // resto del contenido del slide 1 se desvanece mientras el mapa crece
     var slide1Rest = slide1.querySelectorAll(':scope > *:not(#mapMorphSource):not(.hv-map-frame)');
