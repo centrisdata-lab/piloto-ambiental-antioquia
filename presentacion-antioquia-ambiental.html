@@ -2088,11 +2088,228 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     return true;
   }
 
-  /* punto de entrada unico de navegacion: usa el morph solo en la transicion 1 -> 2 */
+  /* ============================================================
+     catalogo de transiciones entre slides consecutivos (solo al
+     avanzar con Siguiente/flecha derecha; retroceder y saltos
+     directos siempre usan el scroll simple de goTo). */
+
+  function captureSnapshot(slide){
+    // clon "congelado" del slide actual, para poder animarlo por encima
+    // de todo mientras el scroll real ya se mueve hacia el siguiente.
+    var rect = slide.getBoundingClientRect();
+    var wrap = document.createElement('div');
+    wrap.style.position = 'fixed';
+    wrap.style.left = rect.left + 'px';
+    wrap.style.top = rect.top + 'px';
+    wrap.style.width = rect.width + 'px';
+    wrap.style.height = rect.height + 'px';
+    wrap.style.overflow = 'hidden';
+    wrap.style.zIndex = '9999';
+    wrap.style.pointerEvents = 'none';
+    wrap.style.borderRadius = getComputedStyle(slide).borderRadius;
+    wrap.style.boxShadow = getComputedStyle(slide).boxShadow;
+    var clone = slide.cloneNode(true);
+    clone.style.position = 'absolute';
+    clone.style.inset = '0';
+    clone.style.width = '100%';
+    clone.style.height = '100%';
+    clone.style.opacity = '1';
+    clone.style.transform = 'none';
+    clone.style.transition = 'none';
+    wrap.appendChild(clone);
+    (document.fullscreenElement || document.body).appendChild(wrap);
+    return wrap;
+  }
+
+  /* slide-push: el slide saliente se desliza hacia arriba mientras el
+     entrante empuja desde abajo, ambos visibles al mismo tiempo. */
+  function playSlidePush(fromSlide, toIndex){
+    var outWrap = captureSnapshot(fromSlide);
+    var outRect = outWrap.getBoundingClientRect();
+
+    goTo(toIndex);
+
+    var duration = 620;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var t = Math.min(1, (ts - startTime) / duration);
+      var eased = easeInOutCubic(t);
+      outWrap.style.transform = 'translateY(' + (-eased * outRect.height * 0.9) + 'px)';
+      outWrap.style.opacity = String(1 - eased * 0.7);
+      if (t < 1) requestAnimationFrame(step);
+      else outWrap.remove();
+    }
+    requestAnimationFrame(step);
+    return true;
+  }
+
+  /* zoom-through: el slide actual se acerca y se desvanece, como si la
+     camara atravesara la pantalla hacia el siguiente contenido. */
+  function playZoomThrough(fromSlide, toIndex){
+    var outWrap = captureSnapshot(fromSlide);
+    outWrap.style.transformOrigin = 'center center';
+
+    var toSlide = slides[toIndex];
+    if (toSlide) {
+      toSlide.style.transition = 'none';
+      toSlide.style.transform = 'scale(1.06)';
+      toSlide.style.opacity = '0';
+    }
+
+    goTo(toIndex);
+
+    var duration = 620;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var t = Math.min(1, (ts - startTime) / duration);
+      var eased = easeInOutCubic(t);
+      outWrap.style.transform = 'scale(' + (1 + eased * 0.55) + ')';
+      outWrap.style.opacity = String(1 - eased);
+      if (toSlide) {
+        toSlide.style.transform = 'scale(' + (1.06 - eased * 0.06) + ')';
+        toSlide.style.opacity = String(eased);
+      }
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        outWrap.remove();
+        if (toSlide) {
+          toSlide.style.transition = '';
+          toSlide.style.transform = '';
+          toSlide.style.opacity = '';
+        }
+      }
+    }
+    requestAnimationFrame(step);
+    return true;
+  }
+
+  /* reveal lateral: el siguiente slide entra deslizandose desde la
+     derecha con una leve sombra, como una tarjeta nueva sobre la pila. */
+  function playRevealLateral(fromSlide, toIndex){
+    // el snapshot saliente SI puede ser un clon fixed (su posicion actual es
+    // conocida y estable). El slide entrante se anima el mismo, en vivo, con
+    // transform/opacity: intentar clonarlo justo tras iniciar el scroll da
+    // coordenadas incorrectas porque el scroll aun no llego a su destino.
+    var outWrap = captureSnapshot(fromSlide);
+
+    var toSlide = slides[toIndex];
+    if (toSlide) {
+      toSlide.style.transition = 'none';
+      toSlide.style.transform = 'translateX(55px)';
+      toSlide.style.opacity = '0';
+    }
+
+    goTo(toIndex);
+
+    var duration = 560;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var t = Math.min(1, (ts - startTime) / duration);
+      var eased = easeInOutCubic(t);
+      outWrap.style.opacity = String(1 - eased);
+      outWrap.style.transform = 'translateX(' + (-eased * 40) + 'px)';
+      if (toSlide) {
+        toSlide.style.transform = 'translateX(' + ((1 - eased) * 55) + 'px)';
+        toSlide.style.opacity = String(eased);
+      }
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        outWrap.remove();
+        if (toSlide) {
+          toSlide.style.transition = '';
+          toSlide.style.transform = '';
+          toSlide.style.opacity = '';
+        }
+      }
+    }
+    requestAnimationFrame(step);
+    return true;
+  }
+
+  /* cross-fade tematico: fundido simple pero con leve parallax vertical,
+     para pares de slides que comparten tema/paleta sin compartir imagen. */
+  function playCrossfadeParallax(fromSlide, toIndex){
+    var outWrap = captureSnapshot(fromSlide);
+
+    var toSlide = slides[toIndex];
+    goTo(toIndex);
+    if (toSlide) {
+      toSlide.style.transition = 'none';
+      toSlide.style.opacity = '0';
+      toSlide.style.transform = 'translateY(22px)';
+    }
+
+    var duration = 560;
+    var startTime = null;
+    function step(ts){
+      if (startTime === null) startTime = ts;
+      var t = Math.min(1, (ts - startTime) / duration);
+      var eased = easeInOutCubic(t);
+      outWrap.style.opacity = String(1 - eased);
+      outWrap.style.transform = 'translateY(' + (-eased * 18) + 'px)';
+      if (toSlide) {
+        toSlide.style.opacity = String(eased);
+        toSlide.style.transform = 'translateY(' + ((1 - eased) * 22) + 'px)';
+      }
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        outWrap.remove();
+        if (toSlide) {
+          toSlide.style.transition = '';
+          toSlide.style.opacity = '';
+          toSlide.style.transform = '';
+        }
+      }
+    }
+    requestAnimationFrame(step);
+    return true;
+  }
+
+  /* asignacion: que transicion usar al avanzar DESDE el slide de este indice
+     (0-based) hacia el siguiente. Si no aparece aqui, se usa el scroll simple. */
+  var TRANSITIONS = {
+    1: playSlidePush,          // 2 -> 3 (lineas estrategicas -> reseña historica)
+    2: playCrossfadeParallax,  // 3 -> 4 (reseña -> gran oportunidad)
+    5: playZoomThrough,        // 6 -> 7 (objetivo general -> problematicas: entra en detalle)
+    6: playZoomThrough,        // 7 -> 8 (problematicas -> evidencia visual: mismo tema, mas fuerte)
+    8: playRevealLateral,      // 9 -> 10 (objetivos especificos -> propuesta metodologica: nuevo capitulo)
+    10: playSlidePush,         // 11 -> 12 (poblacion -> organizaciones: misma familia tematica)
+    12: playCrossfadeParallax, // 13 -> 14 (fases del concurso -> Medellin)
+    13: playRevealLateral,     // 14 -> 15 (Medellin -> tabla de premios: nuevo capitulo)
+    15: playSlidePush,         // 16 -> 17 (organigrama -> cronograma)
+    17: playCrossfadeParallax, // 18 -> 19 (fases y clausura -> desfile)
+    18: playSlidePush,         // 19 -> 20 (desfile -> socializacion)
+    20: playZoomThrough,       // 21 -> 22 (premio -> redes y politicas: entra en detalle)
+    22: playRevealLateral,     // 23 -> 24 (poblacion subregion -> proyecto transversal: nuevo capitulo)
+    24: playCrossfadeParallax  // 25 -> 26 (mensaje inspirador -> cierre)
+  };
+
+  /* punto de entrada unico de navegacion: aplica el efecto que corresponda
+     solo al avanzar un slide con Siguiente/flecha; el resto usa goTo simple. */
+  var transitionInProgress = false;
+  function withGuard(fn, maxDuration){
+    transitionInProgress = true;
+    setTimeout(function(){ transitionInProgress = false; }, maxDuration);
+    return fn();
+  }
+
   function navigateTo(i){
+    if (transitionInProgress) return; // ignora clics/teclas mientras una transicion anima
     var current = currentIndex();
-    if (current === 0 && i === 1) {
-      if (playMapMorph()) return;
+    var advancingOne = (i === current + 1);
+    if (advancingOne) {
+      if (current === 0 && i === 1) {
+        if (withGuard(playMapMorph, 1200)) return;
+      }
+      var effect = TRANSITIONS[current];
+      if (effect && withGuard(function(){ return effect(slides[current], i); }, 700)) return;
+      transitionInProgress = false;
     }
     goTo(i);
   }
