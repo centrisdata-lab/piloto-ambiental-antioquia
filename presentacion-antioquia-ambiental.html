@@ -2482,7 +2482,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     root.appendChild(grid);
 
     // franjas de "glitch" recortadas del slide saliente, con jitter horizontal aleatorio
-    var stripeCount = 9;
+    var stripeCount = 7;
     var stripes = [];
     for (var i = 0; i < stripeCount; i++) {
       var sh = outRect.height / stripeCount;
@@ -2507,7 +2507,10 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       stripBox.style.transformStyle = 'preserve-3d';
       stripBox.appendChild(strip);
       root.appendChild(stripBox);
-      stripes.push({ el: stripBox, delay: i * 40, jitter: (Math.random() - 0.5) * 46, dir: i % 2 === 0 ? 1 : -1 });
+      // todas las franjas salen en la MISMA direccion (hacia la izquierda,
+      // sentido del avance) -- alternar direcciones por franja se percibia
+      // como que la pantalla se movia erraticamente para todos lados.
+      stripes.push({ el: stripBox, delay: i * 40, jitter: (Math.random() - 0.5) * 20, dir: -1 });
     }
     outWrap.style.opacity = '0'; // las franjas reemplazan visualmente al snapshot completo
 
@@ -2554,7 +2557,16 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
 
     var duration = 1450;
     var startTime = null;
-    var toRectCache = toSlide ? toSlide.getBoundingClientRect() : null;
+    // se calcula la posicion FINAL (centrada) a la que goTo() esta llevando
+    // el slide, en vez de leer su rect actual -- el scroll de goTo() sigue
+    // en curso mientras corre este efecto, y leer el rect en vivo haria que
+    // la linea/mascara "persiguieran" el scroll (se ve como si la pantalla
+    // saltara de lugar en vez de un efecto estable).
+    var toRectCache = toSlide ? (function(){
+      var r = toSlide.getBoundingClientRect();
+      var finalTop = (window.innerHeight - r.height) / 2;
+      return { top: finalTop, left: r.left, width: r.width, height: r.height };
+    })() : null;
     function step(ts){
       if (startTime === null) startTime = ts;
       var elapsed = ts - startTime;
@@ -2574,7 +2586,10 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         st.el.style.opacity = lt < 0.72 ? '1' : String(Math.max(0, 1 - (lt - 0.72) / 0.28));
       });
 
-      var rect = toSlide ? toSlide.getBoundingClientRect() : toRectCache;
+      // se usa la posicion capturada UNA sola vez al arrancar, no la que
+      // cambia en vivo por el scroll de goTo() -- si no, la linea/mascara
+      // "persigue" el scroll y se ve como si la pantalla saltara de lugar.
+      var rect = toRectCache;
       var lineY = rect.top + rect.height * eased;
       scanLine.style.top = lineY + 'px';
       scanLine2.style.top = (lineY - 10) + 'px';
