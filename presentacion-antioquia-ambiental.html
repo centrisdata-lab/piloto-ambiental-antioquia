@@ -38,6 +38,14 @@
 
 html{background:#0c261c;}
 
+/* al hacer scroll libre (rueda del mouse), ajusta automaticamente a la
+   diapositiva mas cercana centrada en el alto de la ventana -- asi se ve
+   completa en vez de quedar cortada arriba/abajo segun donde pare el
+   scroll nativo. La navegacion por botones ya centra via JS (goTo) y no
+   se ve afectada por esto. */
+html{ scroll-snap-type: y proximity; }
+@media (prefers-reduced-motion: reduce){ html{ scroll-snap-type: none; } }
+
 body{
   font-family:var(--sans);
   color:var(--ink);
@@ -68,6 +76,8 @@ body{
   opacity:0;
   transform:translateY(36px) scale(.985);
   transition:opacity .8s cubic-bezier(0.16,1,0.3,1), transform .8s cubic-bezier(0.16,1,0.3,1), box-shadow .3s ease;
+  scroll-snap-align:center;
+  scroll-margin-block:48px;
 }
 .slide.in-view{
   opacity:1;
