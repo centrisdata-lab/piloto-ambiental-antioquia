@@ -2148,28 +2148,107 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
      retraso escalonado respecto al anterior -- eso es lo que hace
      que se perciba como piezas independientes en vez de una foto
      estatica deslizandose. */
-  function getLayers(slideEl){
-    var host = slideEl.querySelector(':scope > .pad-lg') || slideEl;
-    var direct = Array.prototype.filter.call(host.children, function(el){
-      return el.offsetWidth > 20 && el.offsetHeight > 10; // ignora marcas/decoracion casi invisibles
-    });
+  function expandIfFew(container, items){
     // si hay pocos bloques de primer nivel, se busca un nivel mas profundo
     // (tarjetas dentro de un grid, celdas, chips...) para tener mas piezas
     // independientes que muevan -- asi el movimiento se nota en slides con
     // poco contenido de alto nivel, no solo en los que tienen muchas secciones.
-    var layers = direct.slice();
-    if (direct.length <= 3) {
-      direct.forEach(function(el){
+    var out = items.slice();
+    if (items.length <= 3) {
+      items.forEach(function(el){
         var kids = Array.prototype.filter.call(el.children, function(k){
           return k.offsetWidth > 40 && k.offsetHeight > 24;
         });
         if (kids.length >= 2 && kids.length <= 8) {
-          var idx = layers.indexOf(el);
-          layers.splice.apply(layers, [idx, 1].concat(kids));
+          var idx = out.indexOf(el);
+          out.splice.apply(out, [idx, 1].concat(kids));
         }
       });
     }
-    return layers.length ? layers : [host];
+    return out;
+  }
+
+  // clases de componentes "atomicos": una vez que el recorrido llega a uno
+  // de estos, se trata como una sola pieza visual (tarjeta/tile completa)
+  // y NO se sigue desglosando en su marcado interno (imagen + overlay +
+  // texto), aunque tenga 2-8 hijos grandes -- eso rompia tarjetas como
+  // .frame en fragmentos sin sentido narrativo propio.
+  var ATOMIC_CLASSES = ['frame', 'hv', 'issue-card', 'card', 'pill', 'timeline-arrow'];
+  function isAtomic(el){
+    if (!el.classList) return false;
+    return ATOMIC_CLASSES.some(function(c){ return el.classList.contains(c); });
+  }
+
+  function expandNode(el){
+    // desglosa un elemento en sus propias piezas visibles, respetando SIEMPRE
+    // a sus hermanos (nunca "salta" directo a un .pad-lg descartando lo que
+    // esta al lado, ej. una imagen de portada junto al bloque de texto).
+    // - atomico (.frame, .hv, .pill...): se queda como una sola pieza.
+    // - .pad-lg: se desglosa en sus propios hijos (el contenido narrativo).
+    // - wrapper generico con pocos hijos grandes (2-8, ej. un grid de layout):
+    //   se recorre cada hijo por separado con la misma logica.
+    // - cualquier otro caso: se queda como una sola pieza.
+    if (isAtomic(el)) return [el];
+    if (el.classList && el.classList.contains('pad-lg')) {
+      var inner = Array.prototype.filter.call(el.children, function(k){
+        return k.offsetWidth > 20 && k.offsetHeight > 10;
+      });
+      return expandIfFew(el, inner);
+    }
+    var kids = Array.prototype.filter.call(el.children, function(k){
+      return k.offsetWidth > 40 && k.offsetHeight > 24;
+    });
+    if (kids.length >= 2 && kids.length <= 8) {
+      var out = [];
+      kids.forEach(function(k){ out = out.concat(expandNode(k)); });
+      return out;
+    }
+    return [el];
+  }
+
+  function getLayers(slideEl){
+    // TODOS los hijos directos visibles del slide entran en juego -- no solo
+    // los de adentro de .pad-lg. Muchos slides tienen fondos/imagenes fuera
+    // de .pad-lg (hermanos, ej. un div de fondo con fotos) que antes se
+    // quedaban completamente estaticos durante la transicion mientras el
+    // resto del contenido si se animaba. Ademas .pad-lg puede estar anidado
+    // dentro de un wrapper de layout (ej. un grid de 2 columnas), no siempre
+    // como hijo directo del slide -- expandNode lo busca en cualquier nivel.
+    var topChildren = Array.prototype.filter.call(slideEl.children, function(el){
+      if (el.classList && (el.classList.contains('slide-num') || el.classList.contains('brand-tag'))) return false;
+      return el.offsetWidth > 20 && el.offsetHeight > 10;
+    });
+
+    var layers = [];
+    topChildren.forEach(function(el){
+      layers = layers.concat(expandNode(el));
+    });
+
+    return layers.length ? layers : [slideEl];
+  }
+
+  // las marcas pequeñas (numero de pagina, nombre del proyecto) se excluyen
+  // de getLayers porque son metadatos de esquina, no contenido narrativo --
+  // pero deben aparecer igual, con un fade sutil y tardio, para que ningun
+  // elemento del slide quede completamente sin animar durante la transicion.
+  function getMarkers(slideEl){
+    return Array.prototype.filter.call(slideEl.children, function(el){
+      return el.classList && (el.classList.contains('slide-num') || el.classList.contains('brand-tag'));
+    });
+  }
+  function primeMarkers(slideEl){
+    var markers = getMarkers(slideEl);
+    markers.forEach(function(m){ m.style.transition = 'none'; m.style.opacity = '0'; });
+    return markers;
+  }
+  function stepMarkers(markers, elapsed, startDelay){
+    markers.forEach(function(m, i){
+      var ld = Math.max(0, Math.min(1, (elapsed - (startDelay + i * 90)) / 260));
+      m.style.opacity = String(easeInOutCubic(ld));
+    });
+  }
+  function finishMarkers(markers){
+    markers.forEach(function(m){ m.style.transition = ''; m.style.opacity = ''; });
   }
 
   function goldFlash(centerX, centerY, opts){
@@ -2378,6 +2457,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
 
     var toSlide = slides[toIndex];
     var inLayers = toSlide ? getLayers(toSlide) : [];
+    var inMarkers = toSlide ? primeMarkers(toSlide) : [];
     if (toSlide) {
       toSlide.style.transition = 'none';
       toSlide.style.opacity = '1';
@@ -2437,9 +2517,12 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         o.el.style.filter = 'blur(' + blur.toFixed(1) + 'px) drop-shadow(0 0 ' + Math.max(0, glow) + 'px rgba(242,205,110,.75))';
       });
 
+      stepMarkers(inMarkers, elapsed, inStartOffset + inMeta.length * 100 + 120);
+
       var allOutDone = elapsed > outDuration + outClones.length * 65;
       var allInDone = elapsed > inStartOffset + inDuration + inMeta.length * 100;
-      if (!allOutDone || !allInDone) {
+      var markersDone = elapsed > inStartOffset + inMeta.length * 100 + 120 + inMarkers.length * 90 + 260;
+      if (!allOutDone || !allInDone || !markersDone) {
         requestAnimationFrame(step);
       } else {
         outClones.forEach(function(o){ o.box.remove(); });
@@ -2450,6 +2533,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
           o.el.style.filter = '';
           o.el.style.transformStyle = '';
         });
+        finishMarkers(inMarkers);
         if (toSlide) { toSlide.style.transition = ''; toSlide.style.perspective = ''; }
       }
     }
@@ -2549,10 +2633,12 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     // leve elevacion) escalonada, para que se perciba que los elementos van
     // apareciendo uno a uno detras de la linea de escaneo, no todos de golpe.
     var inLayers = toSlide ? getLayers(toSlide) : [];
+    var inMarkers = toSlide ? primeMarkers(toSlide) : [];
     inLayers.forEach(function(l){
       l.style.transition = 'none';
       l.style.opacity = '0';
-      l.style.transform = 'translateY(16px)';
+      l.style.transformStyle = 'preserve-3d';
+      l.style.transform = 'perspective(900px) translateY(16px) rotateX(-18deg)';
     });
 
     var duration = 1450;
@@ -2609,11 +2695,15 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         var ld = Math.max(0, Math.min(1, (elapsed - (120 + i * 130)) / 420));
         var le = easeInOutCubic(ld);
         l.style.opacity = String(le);
-        l.style.transform = 'translateY(' + (16 * (1 - le)) + 'px)';
+        l.style.transform = 'perspective(900px) translateY(' + (16 * (1 - le)) + 'px) rotateX(' + (-18 * (1 - le)) + 'deg)';
       });
 
+      var markersStart = 120 + inLayers.length * 130 + 60;
+      stepMarkers(inMarkers, elapsed, markersStart);
+
       var layersDone = elapsed > 120 + inLayers.length * 130 + 420;
-      if (t < 1 || !layersDone) {
+      var markersDone = elapsed > markersStart + inMarkers.length * 90 + 260;
+      if (t < 1 || !layersDone || !markersDone) {
         requestAnimationFrame(step);
       } else {
         outWrap.remove();
@@ -2632,7 +2722,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
           l.style.transition = '';
           l.style.opacity = '';
           l.style.transform = '';
+          l.style.transformStyle = '';
         });
+        finishMarkers(inMarkers);
       }
     }
     requestAnimationFrame(step);
@@ -2660,10 +2752,13 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     // el contenedor entero hace el dolly-zoom (marco/estructura), pero el
     // contenido interno aparece capa por capa, escalonado, no todo de golpe.
     var inLayers = toSlide ? getLayers(toSlide) : [];
-    inLayers.forEach(function(l){
+    var inMarkers = toSlide ? primeMarkers(toSlide) : [];
+    inLayers.forEach(function(l, li){
       l.style.transition = 'none';
       l.style.opacity = '0';
-      l.style.transform = 'translateY(14px) scale(.97)';
+      l.style.transformStyle = 'preserve-3d';
+      var tilt = (li % 2 === 0) ? 14 : -14;
+      l.style.transform = 'perspective(1000px) translateY(14px) rotateX(' + tilt + 'deg) scale(.97)';
     });
 
     goTo(toIndex);
@@ -2776,12 +2871,17 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       inLayers.forEach(function(l, i){
         var ld = Math.max(0, Math.min(1, (elapsed - (300 + i * 110)) / 420));
         var le = easeInOutCubic(ld);
+        var tilt = (i % 2 === 0) ? 14 : -14;
         l.style.opacity = String(le);
-        l.style.transform = 'translateY(' + (14 * (1 - le)) + 'px) scale(' + (0.97 + 0.03 * le) + ')';
+        l.style.transform = 'perspective(1000px) translateY(' + (14 * (1 - le)) + 'px) rotateX(' + (tilt * (1 - le)) + 'deg) scale(' + (0.97 + 0.03 * le) + ')';
       });
 
+      var markersStart = 300 + inLayers.length * 110 + 60;
+      stepMarkers(inMarkers, elapsed, markersStart);
+
       var layersDone = elapsed > 300 + inLayers.length * 110 + 420;
-      if (t < 1 || !layersDone) {
+      var markersDone = elapsed > markersStart + inMarkers.length * 90 + 260;
+      if (t < 1 || !layersDone || !markersDone) {
         requestAnimationFrame(step);
       } else {
         outWrap.remove();
@@ -2792,7 +2892,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
           l.style.transition = '';
           l.style.opacity = '';
           l.style.transform = '';
+          l.style.transformStyle = '';
         });
+        finishMarkers(inMarkers);
         corners.forEach(function(c){ c.el.remove(); });
         if (toSlide) {
           toSlide.style.transition = '';
@@ -2838,9 +2940,11 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     // interna hace su propio asentamiento final escalonado, para que se
     // perciba que los elementos van apareciendo uno a uno al llegar.
     var inLayers = toSlide ? getLayers(toSlide) : [];
+    var inMarkers = toSlide ? primeMarkers(toSlide) : [];
     inLayers.forEach(function(l){
       l.style.transition = 'none';
       l.style.opacity = '0';
+      l.style.transformStyle = 'preserve-3d';
       l.style.transform = 'translateY(12px)';
     });
 
@@ -2875,12 +2979,17 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       inLayers.forEach(function(l, i){
         var ld = Math.max(0, Math.min(1, (elapsed - (420 + i * 100)) / 400));
         var le = easeInOutCubic(ld);
+        var tilt = (i % 2 === 0) ? -20 : 20;
         l.style.opacity = String(le);
-        l.style.transform = 'translateY(' + (12 * (1 - le)) + 'px)';
+        l.style.transform = 'perspective(1000px) translateY(' + (12 * (1 - le)) + 'px) translateZ(' + (-60 * (1 - le)) + 'px) rotateX(' + (tilt * (1 - le)) + 'deg)';
       });
 
+      var markersStart = 420 + inLayers.length * 100 + 60;
+      stepMarkers(inMarkers, elapsed, markersStart);
+
       var layersDone = elapsed > 420 + inLayers.length * 100 + 400;
-      if (t < 1 || !layersDone) {
+      var markersDone = elapsed > markersStart + inMarkers.length * 90 + 260;
+      if (t < 1 || !layersDone || !markersDone) {
         requestAnimationFrame(step);
       } else {
         outWrap.remove();
@@ -2896,7 +3005,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
           l.style.transition = '';
           l.style.opacity = '';
           l.style.transform = '';
+          l.style.transformStyle = '';
         });
+        finishMarkers(inMarkers);
       }
     }
     requestAnimationFrame(step);
@@ -2920,7 +3031,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     stage.style.height = outRect.height + 'px';
     stage.style.zIndex = '9999';
     stage.style.pointerEvents = 'none';
-    stage.style.perspective = '1800px';
+    stage.style.perspective = '1050px';
     root.appendChild(stage);
 
     var outFace = fromSlide.cloneNode(true);
@@ -2956,6 +3067,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         l.style.transform = 'translateY(10px)';
       });
     }
+    var inFaceMarkers = inFace ? primeMarkers(inFace) : [];
 
     if (toSlide) {
       toSlide.style.transition = 'none';
@@ -2974,7 +3086,11 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       var eased = easeInOutCubic(t);
 
       var angle = eased * 90;
-      stage.style.transform = 'translateZ(-1px)';
+      // leve bamboleo en X (sube y vuelve a bajar durante el giro) para que
+      // se perciba como un cubo real en el espacio, no un giro plano en un
+      // solo eje -- el pico esta a mitad del recorrido (t=0.5).
+      var wobble = Math.sin(t * Math.PI) * 7;
+      stage.style.transform = 'translateZ(-1px) rotateX(' + wobble + 'deg)';
       outFace.style.transform = 'rotateY(-' + angle + 'deg)';
       outFace.style.filter = angle > 60 ? 'brightness(' + (1 - (angle - 60) / 30 * 0.5) + ')' : 'none';
       if (inFace) {
@@ -2989,8 +3105,12 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         l.style.transform = 'translateY(' + (10 * (1 - le)) + 'px)';
       });
 
+      var markersStart = 500 + inFaceLayers.length * 90 + 60;
+      stepMarkers(inFaceMarkers, elapsedMs, markersStart);
+
       var layersDone = elapsedMs > 500 + inFaceLayers.length * 90 + 380;
-      if (t < 1 || !layersDone) {
+      var markersDone = elapsedMs > markersStart + inFaceMarkers.length * 90 + 260;
+      if (t < 1 || !layersDone || !markersDone) {
         requestAnimationFrame(step);
       } else {
         stage.remove();
@@ -3011,12 +3131,21 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
 
     var toSlide = slides[toIndex];
     var inLayers = toSlide ? getLayers(toSlide) : [];
+    var inMarkers = toSlide ? primeMarkers(toSlide) : [];
     if (toSlide) {
       toSlide.style.transition = 'none';
       toSlide.style.opacity = '1';
       toSlide.style.transform = 'none';
     }
-    inLayers.forEach(function(l){ l.style.opacity = '0'; });
+    inLayers.forEach(function(l){
+      l.style.transition = 'none';
+      l.style.opacity = '0';
+    });
+    // si el slide entrante tiene MAS capas que el saliente, las capas sin
+    // pareja de volteo (indices >= outLayers.length) antes se quedaban en
+    // opacity:0 para siempre -- ahora hacen su propio fade simple, en la
+    // cola de la cascada, para que ningun elemento quede sin aparecer.
+    var extraInLayers = inLayers.slice(outLayers.length);
 
     var pairs = outLayers.map(function(layer, i){
       var lr = layer.getBoundingClientRect();
@@ -3071,6 +3200,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     goTo(toIndex);
 
     var duration = 820;
+    var extraStart = pairs.length ? (pairs.length - 1) * 150 + 260 : 0;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -3084,13 +3214,29 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         var lift = Math.sin(lt * Math.PI) * -46;
         p.flipper.style.transform = 'translateZ(' + lift + 'px) rotateY(' + angle + 'deg)';
       });
+
+      extraInLayers.forEach(function(l, i){
+        var ld = Math.max(0, Math.min(1, (elapsed - (extraStart + i * 90)) / 360));
+        if (ld < 1) allDone = false;
+        l.style.opacity = String(easeInOutCubic(ld));
+      });
+
+      var markersStart = extraStart + extraInLayers.length * 90 + 60;
+      stepMarkers(inMarkers, elapsed, markersStart);
+      if (elapsed < markersStart + inMarkers.length * 90 + 260) allDone = false;
+
       if (!allDone) {
         requestAnimationFrame(step);
       } else {
         pairs.forEach(function(p){
           p.box.remove();
-          if (p.inTarget) p.inTarget.style.opacity = '';
+          if (p.inTarget) { p.inTarget.style.opacity = ''; p.inTarget.style.transition = ''; }
         });
+        extraInLayers.forEach(function(l){
+          l.style.transition = '';
+          l.style.opacity = '';
+        });
+        finishMarkers(inMarkers);
         if (toSlide) toSlide.style.transition = '';
       }
     }
