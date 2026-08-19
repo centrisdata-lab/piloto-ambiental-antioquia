@@ -2825,8 +2825,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       var eased = easeInOutCubic(t);
 
       // el hundimiento (translateZ/rotateX grandes) es lo que se percibe;
-      // la opacidad solo cae en el ultimo tramo cuando ya esta muy lejos.
-      outWrap.style.opacity = t < 0.55 ? '1' : String(Math.max(0, 1 - (t - 0.55) / 0.45));
+      // la opacidad solo cae en el ultimo tramo, ya casi al final del
+      // recorrido, para que no se perciba "desapareciendo" a medio camino.
+      outWrap.style.opacity = t < 0.78 ? '1' : String(Math.max(0, 1 - (t - 0.78) / 0.22));
       outWrap.style.transform = 'perspective(1200px) scale(' + (1 - eased * 0.42) + ') translateZ(' + (-eased * 620) + 'px) translateY(' + (eased * 70) + 'px) rotateX(' + (eased * 22) + 'deg) rotateY(' + (eased * 14) + 'deg)';
       outWrap.style.filter = 'blur(' + (eased * 5).toFixed(1) + 'px)';
 
@@ -2964,8 +2965,11 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
 
       var fallE = easeInOutCubic(Math.min(1, t / 0.85));
       outWrap.style.transform = 'perspective(1100px) rotateX(' + (-fallE * 78) + 'deg) translateY(' + (fallE * 160) + 'px) translateZ(' + (-fallE * 640) + 'px) scale(' + (1 - fallE * 0.35) + ')';
-      // cae/se hunde en profundidad -- la opacidad solo actua muy al final.
-      outWrap.style.opacity = t < 0.6 ? '1' : String(Math.max(0, 1 - (t - 0.6) / 0.4));
+      // el desvanecido arranca DESPUES de que el movimiento de caida (fallE,
+      // que termina en t=0.85) ya esta practicamente completo -- si el fade
+      // empezaba antes (t=0.6), la pieza se percibia desapareciendo a medio
+      // camino de su recorrido en vez de completarlo primero.
+      outWrap.style.opacity = t < 0.82 ? '1' : String(Math.max(0, 1 - (t - 0.82) / 0.18));
       outWrap.style.filter = 'blur(' + (fallE * 4).toFixed(1) + 'px)';
 
       if (toSlide) {
@@ -3150,6 +3154,11 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     var pairs = outLayers.map(function(layer, i){
       var lr = layer.getBoundingClientRect();
       var outClone = layer.cloneNode(true);
+      // la pieza ORIGINAL del slide saliente se oculta -- solo su clon (en
+      // la caja fixed) es lo que se ve y anima. Sin esto, el elemento real
+      // se queda visible en su nueva posicion tras el scroll de goTo(),
+      // superpuesto/duplicado con el clon que aun esta en la posicion vieja.
+      layer.style.visibility = 'hidden';
       var inTarget = inLayers[i];
       var inClone = inTarget ? inTarget.cloneNode(true) : null;
 
@@ -3228,8 +3237,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       if (!allDone) {
         requestAnimationFrame(step);
       } else {
-        pairs.forEach(function(p){
+        pairs.forEach(function(p, i){
           p.box.remove();
+          outLayers[i].style.visibility = '';
           if (p.inTarget) { p.inTarget.style.opacity = ''; p.inTarget.style.transition = ''; }
         });
         extraInLayers.forEach(function(l){
