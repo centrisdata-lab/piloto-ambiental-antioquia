@@ -2364,17 +2364,17 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       var jitter = (Math.random() - 0.5);
       return {
         box: box,
-        dx: nx * (260 + i * 34) + jitter * 90,
-        dy: ny * (210 + i * 26) + jitter * 60,
-        dz: -520 - i * 50 - Math.random() * 120,
-        rot: (jitter) * 110 - (i % 2 === 0 ? 46 : -46),
+        dx: nx * (300 + i * 40) + jitter * 100,
+        dy: ny * (240 + i * 30) + jitter * 70,
+        dz: -620 - i * 60 - Math.random() * 140,
+        rot: (jitter) * 130 - (i % 2 === 0 ? 55 : -55),
         rotAxis: i % 2 === 0 ? 'Y' : 'X',
-        delay: i * 35
+        delay: i * 65
       };
     });
 
-    goldFlash(cx, cy, { count: 16, maxDist: 150, duration: 650 });
-    speedStreaks(1, { count: 5, duration: 420 });
+    goldFlash(cx, cy, { count: 18, maxDist: 170, duration: 900 });
+    speedStreaks(1, { count: 6, duration: 640 });
 
     var toSlide = slides[toIndex];
     var inLayers = toSlide ? getLayers(toSlide) : [];
@@ -2392,17 +2392,18 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       var jitter = (Math.random() - 0.5);
       return {
         el: layer,
-        dx: dir * (220 + i * 30) + jitter * 80,
-        dy: (60 + i * 14) * -dir,
-        dz: -760 - i * 30,
-        rot: dir * (70 - i * 2),
+        dx: dir * (260 + i * 34) + jitter * 90,
+        dy: (80 + i * 16) * -dir,
+        dz: -880 - i * 34,
+        rot: dir * (78 - i * 2),
         rotAxis: i % 2 === 0 ? 'Y' : 'X'
       };
     });
     goTo(toIndex);
 
-    var outDuration = 600;
-    var inDuration = 720;
+    var outDuration = 920;
+    var inDuration = 1080;
+    var inStartOffset = 260; // el ensamblaje del slide nuevo arranca despues de que ya se ve la explosion, no simultaneo
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -2415,29 +2416,29 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         o.box.style.transform = 'perspective(1000px) translate3d(' + (o.dx * eased) + 'px,' + (o.dy * eased) + 'px,' + (o.dz * eased) + 'px) rotate' + o.rotAxis + '(' + rotAmt + 'deg) scale(' + (1 - eased * 0.15) + ')';
         // el desvanecido solo actua en el ultimo tramo, cuando la pieza ya
         // esta lejos/rotada -- el movimiento es lo que se percibe, no un fade.
-        o.box.style.opacity = lt < 0.62 ? '1' : String(Math.max(0, 1 - (lt - 0.62) / 0.38));
-        var blur = Math.sin(lt * Math.PI) * 3.5;
-        var glow = lt > 0 && lt < 0.5 ? (1 - Math.abs(lt - 0.25) / 0.25) * 12 : 0;
+        o.box.style.opacity = lt < 0.7 ? '1' : String(Math.max(0, 1 - (lt - 0.7) / 0.3));
+        var blur = Math.sin(lt * Math.PI) * 4.5;
+        var glow = lt > 0 && lt < 0.5 ? (1 - Math.abs(lt - 0.25) / 0.25) * 14 : 0;
         o.box.style.filter = 'blur(' + blur.toFixed(1) + 'px) drop-shadow(0 0 ' + glow + 'px rgba(242,205,110,.85))';
       });
 
       inMeta.forEach(function(o, i){
-        var delay = 110 + i * 65;
+        var delay = inStartOffset + i * 100;
         var lt = Math.max(0, Math.min(1, (elapsed - delay) / inDuration));
         var eased = easeInOutCubic(lt);
         var inv = 1 - eased;
         // igual criterio en la entrada: visible casi todo el trayecto,
         // solo aparece desde opacidad 0 en el arranque muy breve.
-        o.el.style.opacity = lt < 0.12 ? String(lt / 0.12) : '1';
+        o.el.style.opacity = lt < 0.1 ? String(lt / 0.1) : '1';
         var rotAmt = o.rot * inv;
         o.el.style.transform = 'perspective(1400px) translate3d(' + (o.dx * inv) + 'px,' + (o.dy * inv) + 'px,' + (o.dz * inv) + 'px) rotate' + o.rotAxis + '(' + rotAmt + 'deg)';
-        var blur = Math.sin(lt * Math.PI) * 2.5;
-        var glow = lt > 0 && lt < 0.6 ? (1 - Math.abs(lt - 0.3) / 0.3) * 9 : 0;
+        var blur = Math.sin(lt * Math.PI) * 3;
+        var glow = lt > 0 && lt < 0.6 ? (1 - Math.abs(lt - 0.3) / 0.3) * 10 : 0;
         o.el.style.filter = 'blur(' + blur.toFixed(1) + 'px) drop-shadow(0 0 ' + Math.max(0, glow) + 'px rgba(242,205,110,.75))';
       });
 
-      var allOutDone = elapsed > outDuration + outClones.length * 35;
-      var allInDone = elapsed > inDuration + inMeta.length * 65 + 110;
+      var allOutDone = elapsed > outDuration + outClones.length * 65;
+      var allInDone = elapsed > inStartOffset + inDuration + inMeta.length * 100;
       if (!allOutDone || !allInDone) {
         requestAnimationFrame(step);
       } else {
@@ -2506,7 +2507,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       stripBox.style.transformStyle = 'preserve-3d';
       stripBox.appendChild(strip);
       root.appendChild(stripBox);
-      stripes.push({ el: stripBox, delay: i * 22, jitter: (Math.random() - 0.5) * 46, dir: i % 2 === 0 ? 1 : -1 });
+      stripes.push({ el: stripBox, delay: i * 40, jitter: (Math.random() - 0.5) * 46, dir: i % 2 === 0 ? 1 : -1 });
     }
     outWrap.style.opacity = '0'; // las franjas reemplazan visualmente al snapshot completo
 
@@ -2542,7 +2543,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       toSlide.style.filter = 'saturate(1.4) brightness(1.08)';
     }
 
-    var duration = 900;
+    var duration = 1450;
     var startTime = null;
     var toRectCache = toSlide ? toSlide.getBoundingClientRect() : null;
     function step(ts){
@@ -2554,14 +2555,14 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       grid.style.opacity = String(t < 0.5 ? Math.min(1, t / 0.15) * 0.9 : Math.max(0, 0.9 - (t - 0.5) / 0.5));
 
       stripes.forEach(function(st){
-        var lt = Math.max(0, Math.min(1, (elapsed - st.delay) / 460));
+        var lt = Math.max(0, Math.min(1, (elapsed - st.delay) / 720));
         var e2 = easeInOutCubic(lt);
         var jx = Math.sin(lt * Math.PI) * st.jitter;
-        var travel = st.dir * (520 + Math.abs(st.jitter) * 4);
-        st.el.style.transform = 'perspective(900px) translateX(' + (jx + e2 * travel) + 'px) translateZ(' + (-e2 * 200) + 'px) rotateY(' + (st.dir * e2 * 24) + 'deg)';
+        var travel = st.dir * (600 + Math.abs(st.jitter) * 4);
+        st.el.style.transform = 'perspective(900px) translateX(' + (jx + e2 * travel) + 'px) translateZ(' + (-e2 * 260) + 'px) rotateY(' + (st.dir * e2 * 30) + 'deg)';
         // el movimiento (translateX/Z grande) es lo que se percibe; la opacidad
         // solo cae en el ultimo tramo cuando la franja ya salio de cuadro.
-        st.el.style.opacity = lt < 0.7 ? '1' : String(Math.max(0, 1 - (lt - 0.7) / 0.3));
+        st.el.style.opacity = lt < 0.72 ? '1' : String(Math.max(0, 1 - (lt - 0.72) / 0.28));
       });
 
       var rect = toSlide ? toSlide.getBoundingClientRect() : toRectCache;
@@ -2673,9 +2674,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     calibV.style.pointerEvents = 'none';
     root.appendChild(calibV);
 
-    goldFlash(outRect.left + outRect.width / 2, outRect.top + outRect.height / 2, { count: 10, maxDist: 90, duration: 500, rings: false });
+    goldFlash(outRect.left + outRect.width / 2, outRect.top + outRect.height / 2, { count: 12, maxDist: 110, duration: 780, rings: false });
 
-    var duration = 780;
+    var duration = 1250;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -2777,10 +2778,10 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     }
 
     goTo(toIndex);
-    speedStreaks(-1, { count: 8, duration: 520 });
-    goldFlash(outRect.left + outRect.width / 2, outRect.top + outRect.height * 0.5, { count: 12, maxDist: 160, duration: 560 });
+    speedStreaks(-1, { count: 9, duration: 780 });
+    goldFlash(outRect.left + outRect.width / 2, outRect.top + outRect.height * 0.5, { count: 14, maxDist: 190, duration: 820 });
 
-    var duration = 820;
+    var duration = 1300;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -2873,9 +2874,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
     }
     goTo(toIndex);
 
-    goldFlash(outRect.left + outRect.width, outRect.top + outRect.height / 2, { count: 10, maxDist: 100, duration: 500, rings: false });
+    goldFlash(outRect.left + outRect.width, outRect.top + outRect.height / 2, { count: 12, maxDist: 120, duration: 750, rings: false });
 
-    var duration = 760;
+    var duration = 1300;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -2966,12 +2967,12 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       }
 
       root.appendChild(box);
-      return { box: box, flipper: flipper, delay: i * 90, inTarget: inTarget };
+      return { box: box, flipper: flipper, delay: i * 150, inTarget: inTarget };
     });
 
     goTo(toIndex);
 
-    var duration = 560;
+    var duration = 820;
     var startTime = null;
     function step(ts){
       if (startTime === null) startTime = ts;
@@ -2982,7 +2983,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         if (lt < 1) allDone = false;
         var eased = easeInOutCubic(lt);
         var angle = eased * 180;
-        var lift = Math.sin(lt * Math.PI) * -26;
+        var lift = Math.sin(lt * Math.PI) * -46;
         p.flipper.style.transform = 'translateZ(' + lift + 'px) rotateY(' + angle + 'deg)';
       });
       if (!allDone) {
@@ -3046,7 +3047,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         if (withGuard(playMapMorph, 1200)) return;
       }
       var effect = TRANSITIONS[current];
-      if (effect && withGuard(function(){ return effect(slides[current], i); }, 1500)) return;
+      if (effect && withGuard(function(){ return effect(slides[current], i); }, 2600)) return;
       transitionInProgress = false;
     }
     goTo(i);
