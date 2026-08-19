@@ -3203,7 +3203,7 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       }
 
       root.appendChild(box);
-      return { box: box, flipper: flipper, delay: i * 150, inTarget: inTarget };
+      return { box: box, flipper: flipper, delay: i * 150, inTarget: inTarget, revealed: false };
     });
 
     goTo(toIndex);
@@ -3222,6 +3222,14 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         var angle = eased * 180;
         var lift = Math.sin(lt * Math.PI) * -46;
         p.flipper.style.transform = 'translateZ(' + lift + 'px) rotateY(' + angle + 'deg)';
+        // la pieza REAL entrante se revela apenas SU propio volteo individual
+        // termina, no cuando termina la cascada completa -- si no, todas
+        // quedan invisibles hasta el final y aparecen de golpe juntas.
+        if (!p.revealed && lt >= 1 && p.inTarget) {
+          p.inTarget.style.opacity = '';
+          p.inTarget.style.transition = '';
+          p.revealed = true;
+        }
       });
 
       extraInLayers.forEach(function(l, i){
