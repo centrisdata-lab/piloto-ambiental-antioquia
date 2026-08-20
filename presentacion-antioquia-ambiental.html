@@ -3203,12 +3203,16 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
       }
 
       root.appendChild(box);
-      return { box: box, flipper: flipper, delay: i * 150, inTarget: inTarget, revealed: false };
+      if (inTarget) {
+        inTarget.style.transform = 'translateY(10px)';
+      }
+      return { box: box, flipper: flipper, delay: i * 150, inTarget: inTarget, boxRemoved: false };
     });
 
     goTo(toIndex);
 
     var duration = 820;
+    var crossfade = 260; // el clon se desvanece MIENTRAS la pieza real aparece con fade suave, en vez de un salto instantaneo de opacidad
     var extraStart = pairs.length ? (pairs.length - 1) * 150 + 260 : 0;
     var startTime = null;
     function step(ts){
@@ -3222,13 +3226,25 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         var angle = eased * 180;
         var lift = Math.sin(lt * Math.PI) * -46;
         p.flipper.style.transform = 'translateZ(' + lift + 'px) rotateY(' + angle + 'deg)';
-        // la pieza REAL entrante se revela apenas SU propio volteo individual
-        // termina, no cuando termina la cascada completa -- si no, todas
-        // quedan invisibles hasta el final y aparecen de golpe juntas.
-        if (!p.revealed && lt >= 1 && p.inTarget) {
-          p.inTarget.style.opacity = '';
-          p.inTarget.style.transition = '';
-          p.revealed = true;
+
+        // crossfade suave: al completar el volteo, el clon se desvanece
+        // mientras la pieza real hace su propio fade-in + settle, en vez de
+        // un cambio instantaneo de opacidad que se percibe como un salto.
+        var ft = Math.max(0, Math.min(1, (elapsed - (p.delay + duration)) / crossfade));
+        if (ft > 0) {
+          var fe = easeInOutCubic(ft);
+          p.box.style.opacity = String(1 - fe);
+          if (p.inTarget) {
+            p.inTarget.style.opacity = String(fe);
+            p.inTarget.style.transform = 'translateY(' + (10 * (1 - fe)) + 'px)';
+          }
+          if (ft < 1) allDone = false;
+          if (ft >= 1 && !p.boxRemoved) {
+            p.box.remove();
+            p.boxRemoved = true;
+          }
+        } else {
+          allDone = false;
         }
       });
 
@@ -3246,9 +3262,9 @@ document.querySelectorAll('img[data-img]').forEach(function(img){
         requestAnimationFrame(step);
       } else {
         pairs.forEach(function(p, i){
-          p.box.remove();
+          if (!p.boxRemoved) p.box.remove();
           outLayers[i].style.visibility = '';
-          if (p.inTarget) { p.inTarget.style.opacity = ''; p.inTarget.style.transition = ''; }
+          if (p.inTarget) { p.inTarget.style.opacity = ''; p.inTarget.style.transition = ''; p.inTarget.style.transform = ''; }
         });
         extraInLayers.forEach(function(l){
           l.style.transition = '';
